@@ -37,17 +37,15 @@ data class PdfImagePlacement(
 }
 
 object PdfPlacementFactory {
-    const val DefaultCardWidth = 0.32f
-    private const val FirstCardTop = 0.095f
+    const val DefaultCardWidth = 0.50f // Updated to 50% width
     private const val CardGap = 0.06f
 
     fun defaultPlacements(count: Int, imagePaths: List<String> = emptyList()): List<PdfImagePlacement> {
-        val placements = mutableListOf<PdfImagePlacement>()
-        var currentY = FirstCardTop
-
+        // Phase 1: Measure all real-world asset proportions
+        val dynamicHeights = mutableListOf<Float>()
         for (index in 0 until count) {
             val path = imagePaths.getOrElse(index) { "" }
-            var aspect = 1.585f // Fallback to typical card ratio
+            var aspect = 1.585f // Generic ID fallback
 
             if (path.isNotEmpty()) {
                 try {
@@ -56,25 +54,36 @@ object PdfPlacementFactory {
                     if (opts.outWidth > 0 && opts.outHeight > 0) {
                         aspect = opts.outWidth.toFloat() / opts.outHeight.toFloat()
                     }
-                } catch (e: Exception) {
-                    // Safety catch ensures basic layout remains safe
-                }
+                } catch (e: Exception) { }
             }
+            val relativeAspect = aspect * (842f / 595f)
+            dynamicHeights.add(DefaultCardWidth / relativeAspect)
+        }
 
-            val dynamicHeight = DefaultCardWidth / aspect
+        // Phase 2: Accumulate final group footprints to mathematically derive central starting Y anchor
+        val totalContentHeight = dynamicHeights.sum()
+        val totalSpacersHeight = if (count > 1) (count - 1) * CardGap else 0f
+        val groupBlockHeight = totalContentHeight + totalSpacersHeight
 
+        // Center the whole group Block vertically on page (1.0f representing total height)
+        var currentY = ((1f - groupBlockHeight) / 2f).coerceAtLeast(0.05f)
+
+        // Phase 3: Compile final absolute placement definitions
+        val placements = mutableListOf<PdfImagePlacement>()
+        for (index in 0 until count) {
+            val h = dynamicHeights[index]
             placements.add(
                 PdfImagePlacement(
-                    imagePath = path,
-                    x = (1f - DefaultCardWidth) / 2f,
-                    y = currentY,
+                    imagePath = imagePaths.getOrElse(index) { "" },
+                    x = (1f - DefaultCardWidth) / 2f, // Centered Horizontally
+                    y = currentY, // Dynamic Floating Center Vertically
                     width = DefaultCardWidth,
-                    height = dynamicHeight
+                    height = h
                 ).clamped()
             )
-
-            currentY += dynamicHeight + CardGap
+            currentY += h + CardGap
         }
+        
         return placements
     }
 

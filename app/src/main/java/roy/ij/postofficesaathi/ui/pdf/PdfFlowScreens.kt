@@ -1237,7 +1237,19 @@ private fun resizePlacement(
     dx: Float,
     dy: Float
 ): PdfImagePlacement {
-    val aspect = if (placement.height > 0f) placement.width / placement.height else 1.585f
+    // 1. Extract absolute physical ratio from file headers
+    var imageAspect = 1.585f
+    if (!placement.imagePath.isNullOrEmpty()) {
+        try {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(placement.imagePath, opts)
+            if (opts.outWidth > 0 && opts.outHeight > 0) {
+                imageAspect = opts.outWidth.toFloat() / opts.outHeight.toFloat()
+            }
+        } catch (e: Exception) { /* Safe default fallback */ }
+    }
+    // 2. Calibrate image aspect into layout-unit ratio (compensating for A4 height)
+    val aspect = imageAspect * (842f / 595f)
     val signedDelta = when (corner) {
         ResizeCorner.BottomRight -> maxOf(dx, dy * aspect)
         ResizeCorner.TopRight -> maxOf(dx, -dy * aspect)
