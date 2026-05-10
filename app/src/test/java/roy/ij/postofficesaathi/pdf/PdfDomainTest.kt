@@ -83,8 +83,10 @@ class PdfDomainTest {
     @Test
     fun defaultVerticalPositionsForOneCard() {
         val one = PdfPlacementFactory.defaultPlacements(1)
-        // First card should start near the top of the page
-        assertTrue("First card should be in the upper portion of A4", one[0].y < 0.2f)
+        val expectedY = (1f - one[0].height) / 2f
+
+        // A single card should be centered vertically on the A4 page.
+        assertEquals(expectedY, one[0].y, 0.0001f)
         assertTrue("First card should not be at the very top", one[0].y > 0.05f)
     }
 
@@ -233,8 +235,11 @@ class PdfDomainTest {
 
     @Test
     fun defaultCardAspectRatioIsIdCard() {
-        // ID/passbook card aspect ratio is approximately 1.585:1
-        val ratio = PdfPlacementFactory.DefaultCardWidth / PdfPlacementFactory.DefaultCardHeight
+        // Placement units are normalized to A4; physical output should still be approximately 1.585:1.
+        val a4Width = 595f
+        val a4Height = 842f
+        val ratio = (PdfPlacementFactory.DefaultCardWidth * a4Width) /
+            (PdfPlacementFactory.DefaultCardHeight * a4Height)
         assertEquals(1.585f, ratio, 0.01f)
     }
 

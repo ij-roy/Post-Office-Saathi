@@ -38,6 +38,9 @@ data class PdfImagePlacement(
 
 object PdfPlacementFactory {
     const val DefaultCardWidth = 0.50f // Updated to 50% width
+    private const val DefaultImageAspect = 1.585f
+    private const val A4AspectCompensation = 842f / 595f
+    const val DefaultCardHeight = DefaultCardWidth / (DefaultImageAspect * A4AspectCompensation)
     private const val CardGap = 0.06f
 
     fun defaultPlacements(count: Int, imagePaths: List<String> = emptyList()): List<PdfImagePlacement> {
@@ -45,7 +48,7 @@ object PdfPlacementFactory {
         val dynamicHeights = mutableListOf<Float>()
         for (index in 0 until count) {
             val path = imagePaths.getOrElse(index) { "" }
-            var aspect = 1.585f // Generic ID fallback
+            var aspect = DefaultImageAspect // Generic ID fallback
 
             if (path.isNotEmpty()) {
                 try {
@@ -56,7 +59,7 @@ object PdfPlacementFactory {
                     }
                 } catch (e: Exception) { }
             }
-            val relativeAspect = aspect * (842f / 595f)
+            val relativeAspect = aspect * A4AspectCompensation
             dynamicHeights.add(DefaultCardWidth / relativeAspect)
         }
 

@@ -67,6 +67,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -458,18 +460,9 @@ fun DocumentCaptureScreen(
         }
 
         if (currentCapture == null) {
-            CaptureButton(
-                modifier = if (isLandscape) {
-                    Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 34.dp)
-                } else {
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(bottom = 28.dp)
-                },
-                onClick = {
+            CameraCaptureControls(
+                isLandscape = isLandscape,
+                onCapture = {
                     captureError = null
                     capturePhoto(
                         context = context,
@@ -481,22 +474,18 @@ fun DocumentCaptureScreen(
                         },
                         onError = { captureError = "Could not capture photo. Please try again." }
                     )
-                }
-            )
-            CameraPillButton(
-                text = "Gallery",
-                onClick = { galleryLauncher.launch("image/*") },
+                },
+                onGallery = { galleryLauncher.launch("image/*") },
                 modifier = if (isLandscape) {
                     Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 34.dp)
-                        .width(132.dp)
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 26.dp)
                 } else {
                     Modifier
-                        .align(Alignment.BottomStart)
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(start = 18.dp, bottom = 28.dp)
-                        .width(118.dp)
+                        .padding(start = 20.dp, end = 20.dp, bottom = 22.dp)
                 }
             )
         } else {
@@ -1706,21 +1695,115 @@ private fun CameraIconButton(
 }
 
 @Composable
+private fun CameraCaptureControls(
+    isLandscape: Boolean,
+    onCapture: () -> Unit,
+    onGallery: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (isLandscape) {
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CaptureButton(onClick = onCapture)
+            GalleryButton(onClick = onGallery, compact = true)
+        }
+    } else {
+        Box(
+            modifier = modifier.height(116.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            GalleryButton(
+                onClick = onGallery,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(bottom = 14.dp)
+            )
+            CaptureButton(
+                onClick = onCapture,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+    }
+}
+
+@Composable
 private fun CaptureButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val primary = MaterialTheme.colorScheme.primary
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier.size(88.dp),
+        shape = CircleShape,
+        color = Color.White.copy(alpha = 0.92f),
+        contentColor = primary,
+        border = BorderStroke(2.dp, Color.White.copy(alpha = 0.56f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(9.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = CircleShape,
+                color = primary.copy(alpha = 0.10f),
+                border = BorderStroke(2.dp, primary.copy(alpha = 0.22f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.PhotoCamera,
+                        contentDescription = "Capture photo",
+                        modifier = Modifier.size(31.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GalleryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
+) {
     Surface(
         onClick = onClick,
         modifier = modifier
-            .width(132.dp)
-            .height(58.dp),
+            .width(if (compact) 82.dp else 104.dp)
+            .height(if (compact) 64.dp else 56.dp),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White.copy(alpha = 0.88f),
-        border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.46f))
+        color = Color.Black.copy(alpha = 0.36f),
+        contentColor = Color.White,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.26f))
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text("Capture", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PhotoLibrary,
+                contentDescription = "Upload from gallery",
+                modifier = Modifier.size(if (compact) 22.dp else 20.dp)
+            )
+            if (!compact) {
+                Text(
+                    "Gallery",
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
