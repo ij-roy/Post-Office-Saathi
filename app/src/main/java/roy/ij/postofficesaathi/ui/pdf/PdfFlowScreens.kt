@@ -31,6 +31,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.key
 import androidx.compose.foundation.shape.CircleShape
@@ -70,6 +72,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -1288,25 +1291,62 @@ fun PdfNameInputScreen(
 
     PdfPage(
         title = "File Name",
-        subtitle = "Enter the customer name for this PDF.",
+        subtitle = "Name and save the PDF.",
         onBack = onBack
     ) {
-        SaathiChip("Final step")
-        OutlinedTextField(
-            value = customerName,
-            onValueChange = { customerName = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Customer name") },
-            singleLine = true,
-            shape = RoundedCornerShape(18.dp)
+        FinalPdfSummaryCard(
+            layoutType = layoutType,
+            pageCount = capturedFiles.size
         )
-        AnimatedVisibility(
-            visible = error != null,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+        SaathiCard {
+            SaathiChip("Final step", accent = MaterialTheme.colorScheme.secondary)
+            Text("Customer details", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "This name will be used to create the saved PDF file.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = customerName,
+                onValueChange = {
+                    customerName = it
+                    error = null
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                label = { Text("Customer name") },
+                placeholder = { Text("Example: Sita Devi") },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    focusedContainerColor = Color.White.copy(alpha = 0.78f),
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.54f)
+                )
+            )
+            FileNamePreview(customerName = customerName, layoutType = layoutType)
+            AnimatedVisibility(
+                visible = error != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                error?.let {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.10f),
+                        contentColor = MaterialTheme.colorScheme.error,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.18f))
+                    ) {
+                        Text(
+                            it,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
             }
         }
         SaathiPrimaryButton(
@@ -1332,18 +1372,10 @@ fun PdfCreatedSuccessScreen(
 
     PdfPage(
         title = "PDF Created",
-        subtitle = file?.name ?: "Your PDF is ready.",
+        subtitle = "Your document is ready.",
         onBack = onHome
     ) {
-        SaathiCard {
-            SaathiChip("Ready", accent = MaterialTheme.colorScheme.secondary)
-            Text("PDF created successfully", style = MaterialTheme.typography.titleLarge)
-            Text(
-                "Open, share, print from another app, or create another PDF.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        PdfSuccessHero(fileName = file?.name)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SaathiSecondaryButton(
                 "Open",
@@ -1357,6 +1389,234 @@ fun PdfCreatedSuccessScreen(
             )
         }
         SaathiPrimaryButton("Create Another PDF", onCreateAnother)
+        SaathiSecondaryButton(
+            text = "Back to Home",
+            onClick = onHome,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun FinalPdfSummaryCard(
+    layoutType: PdfLayoutType,
+    pageCount: Int
+) {
+    SaathiCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PdfStackPreview(
+                layoutType = layoutType,
+                modifier = Modifier.size(width = 92.dp, height = 112.dp)
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SaathiChip("Ready to save")
+                Text("PDF package", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "${layoutType.documentLabels.size} card layout prepared from $pageCount photo${if (pageCount == 1) "" else "s"}.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PdfStackPreview(
+    layoutType: PdfLayoutType,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+        border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(58.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = Color.White.copy(alpha = 0.86f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    repeat(layoutType.documentLabels.size) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            shape = RoundedCornerShape(5.dp),
+                            color = if (it % 2 == 0) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            } else {
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)
+                            }
+                        ) {}
+                    }
+                }
+            }
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(30.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.24f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("PDF", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FileNamePreview(
+    customerName: String,
+    layoutType: PdfLayoutType
+) {
+    val previewName = customerName
+        .trim()
+        .replace(Regex("[^A-Za-z0-9]+"), "_")
+        .trim('_')
+        .ifBlank { "Customer" }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f))
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(
+                "File preview",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Text(
+                "${previewName}_${layoutType.fileLabel}_date.pdf",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun PdfSuccessHero(fileName: String?) {
+    SaathiCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SuccessMark(modifier = Modifier.size(76.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                SaathiChip("Saved", accent = MaterialTheme.colorScheme.secondary)
+                Text("PDF created successfully", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Open it now, share it with the customer, or start another PDF.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = Color.White.copy(alpha = 0.56f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    "Saved file",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    fileName ?: "PDF file",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuccessMark(modifier: Modifier = Modifier) {
+    val secondary = MaterialTheme.colorScheme.secondary
+
+    Surface(
+        modifier = modifier,
+        shape = CircleShape,
+        color = secondary.copy(alpha = 0.14f),
+        border = BorderStroke(1.5.dp, secondary.copy(alpha = 0.24f))
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(18.dp)
+        ) {
+            val strokeWidth = 7f
+            drawLine(
+                color = Color.White,
+                start = Offset(size.width * 0.18f, size.height * 0.54f),
+                end = Offset(size.width * 0.42f, size.height * 0.78f),
+                strokeWidth = strokeWidth
+            )
+            drawLine(
+                color = Color.White,
+                start = Offset(size.width * 0.42f, size.height * 0.78f),
+                end = Offset(size.width * 0.84f, size.height * 0.22f),
+                strokeWidth = strokeWidth
+            )
+            drawLine(
+                color = secondary,
+                start = Offset(size.width * 0.18f, size.height * 0.54f),
+                end = Offset(size.width * 0.42f, size.height * 0.78f),
+                strokeWidth = 4f
+            )
+            drawLine(
+                color = secondary,
+                start = Offset(size.width * 0.42f, size.height * 0.78f),
+                end = Offset(size.width * 0.84f, size.height * 0.22f),
+                strokeWidth = 4f
+            )
+        }
     }
 }
 
@@ -1371,6 +1631,7 @@ private fun PdfPage(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(PagePadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
