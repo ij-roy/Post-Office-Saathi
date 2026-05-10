@@ -29,6 +29,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,6 +65,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.RotateRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -760,6 +764,32 @@ fun PdfPreviewEditorScreen(
     var currentPlacements by remember(placements) { mutableStateOf(placements) }
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     var undoStack by remember(placements) { mutableStateOf<List<List<PdfImagePlacement>>>(emptyList()) }
+    var showResetConfirm by remember { mutableStateOf(false) }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text("Reset Layout?") },
+            text = { Text("Are you sure you want to discard all changes and restore the original positions?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        undoStack = undoStack + listOf(currentPlacements)
+                        currentPlacements = PdfPlacementFactory.reset(currentPlacements)
+                        selectedIndex = null
+                        showResetConfirm = false
+                    }
+                ) {
+                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     SaathiScreen {
         Column(
@@ -800,11 +830,7 @@ fun PdfPreviewEditorScreen(
                             }
                         )
                         TextButton(
-                            onClick = {
-                                undoStack = undoStack + listOf(currentPlacements)
-                                currentPlacements = PdfPlacementFactory.reset(currentPlacements)
-                                selectedIndex = null
-                            }
+                            onClick = { showResetConfirm = true }
                         ) {
                             Text("Reset", color = MaterialTheme.colorScheme.primary)
                         }
@@ -816,6 +842,11 @@ fun PdfPreviewEditorScreen(
                             .height(pageHeight)
                             .shadow(6.dp)
                             .background(Color.White)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { selectedIndex = null }
+                            )
                     ) {
                         A4PlacementEditor(
                             capturedFiles = capturedFiles,
@@ -853,8 +884,7 @@ private fun UndoIconButton(
         enabled = enabled,
         modifier = Modifier.size(48.dp),
         shape = CircleShape,
-        color = Color.White.copy(alpha = if (enabled) 0.96f else 0.62f),
-        border = BorderStroke(1.4.dp, iconColor.copy(alpha = 0.32f)),
+        color = Color.Transparent,
         contentColor = iconColor
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -940,6 +970,7 @@ private fun EditablePdfPlacement(
     onPlacementChanged: (PdfImagePlacement) -> Unit
 ) {
     val density = LocalDensity.current
+    val interactionSource = remember { MutableInteractionSource() }
     var displayPlacement by remember(placement) { mutableStateOf(placement) }
     var rawDragPlacement by remember(placement) { mutableStateOf(placement) }
     var dragHasActiveSnap by remember { mutableStateOf(false) }
@@ -987,6 +1018,11 @@ private fun EditablePdfPlacement(
                 with(density) { cardHeightPx.toDp() }
             )
             .graphicsLayer { rotationZ = displayPlacement.rotationDegrees }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = { onSelected(index) }
+            )
             .pointerInput(index, pageWidthPx, pageHeightPx, placement) {
                 var dragStartPlacement = displayPlacement
                 var totalDrag = Offset.Zero
@@ -1044,10 +1080,10 @@ private fun EditablePdfPlacement(
                     updateDisplay(snap.placement, snap.guides)
                 },
                 onResizeFinished = { commit() },
-                onRotate = { delta ->
+                onRotate = { snappedAngle ->
                     updateDisplay(
                         latestDisplayPlacement.copy(
-                            rotationDegrees = latestDisplayPlacement.rotationDegrees + delta.x * 0.35f
+                            rotationDegrees = snappedAngle
                         )
                     )
                 },
@@ -1098,9 +1134,10 @@ private fun BoxScope.PdfEditHandles(
     placement: PdfImagePlacement,
     onResize: (ResizeCorner, Offset) -> Unit,
     onResizeFinished: () -> Unit,
-    onRotate: (Offset) -> Unit,
+    onRotate: (Float) -> Unit,
     onRotateFinished: () -> Unit
 ) {
+    val currentPlacement by rememberUpdatedState(placement)
     val currentOnRotate by rememberUpdatedState(onRotate)
     val currentOnRotateFinished by rememberUpdatedState(onRotateFinished)
 
@@ -1111,16 +1148,24 @@ private fun BoxScope.PdfEditHandles(
 
     Surface(
         modifier = Modifier
-            .offset(x = 28.dp, y = (-30).dp)
-            .align(Alignment.TopEnd)
-            .size(30.dp)
+            .offset(x = 36.dp)
+            .align(Alignment.CenterEnd)
+            .size(26.dp)
             .pointerInput(Unit) {
+                var startAngle = 0f
+                var totalDelta = 0f
                 detectDragGestures(
+                    onDragStart = {
+                        startAngle = currentPlacement.rotationDegrees
+                        totalDelta = 0f
+                    },
                     onDragEnd = currentOnRotateFinished,
                     onDragCancel = currentOnRotateFinished,
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        currentOnRotate(dragAmount)
+                        totalDelta += dragAmount.x * 0.35f
+                        val snapped = snapRotation(startAngle + totalDelta)
+                        currentOnRotate(snapped)
                     }
                 )
             },
@@ -1129,7 +1174,12 @@ private fun BoxScope.PdfEditHandles(
         border = BorderStroke(2.dp, Color(0xFFB00010))
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text("R", style = MaterialTheme.typography.labelMedium, color = Color(0xFFB00010))
+            Icon(
+                imageVector = Icons.Filled.RotateRight,
+                contentDescription = "Rotate",
+                tint = Color(0xFFB00010),
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
@@ -1148,15 +1198,15 @@ private fun BoxScope.ResizeHandle(
         modifier = modifier
             .offset(
                 x = when (corner) {
-                    ResizeCorner.TopLeft, ResizeCorner.BottomLeft -> (-8).dp
-                    ResizeCorner.TopRight, ResizeCorner.BottomRight -> 8.dp
+                    ResizeCorner.TopLeft, ResizeCorner.BottomLeft -> (-14).dp
+                    ResizeCorner.TopRight, ResizeCorner.BottomRight -> 14.dp
                 },
                 y = when (corner) {
-                    ResizeCorner.TopLeft, ResizeCorner.TopRight -> (-8).dp
-                    ResizeCorner.BottomLeft, ResizeCorner.BottomRight -> 8.dp
+                    ResizeCorner.TopLeft, ResizeCorner.TopRight -> (-14).dp
+                    ResizeCorner.BottomLeft, ResizeCorner.BottomRight -> 14.dp
                 }
             )
-            .size(18.dp)
+            .size(28.dp)
             .pointerInput(corner) {
                 detectDragGestures(
                     onDragEnd = currentOnResizeFinished,
@@ -1167,10 +1217,16 @@ private fun BoxScope.ResizeHandle(
                     }
                 )
             },
-        shape = CircleShape,
-        color = Color.White,
-        border = BorderStroke(2.dp, Color(0xFFB00010))
-    ) {}
+        color = Color.Transparent
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Surface(
+                modifier = Modifier.size(10.dp),
+                shape = CircleShape,
+                color = Color(0xFFB00010)
+            ) {}
+        }
+    }
 }
 
 private enum class ResizeCorner { TopLeft, TopRight, BottomLeft, BottomRight }
@@ -1995,3 +2051,10 @@ private fun sharePdf(context: Context, file: File) {
 
 private fun File.contentUri(context: Context): Uri =
     FileProvider.getUriForFile(context, "${context.packageName}.files", this)
+
+private fun snapRotation(degrees: Float): Float {
+    val threshold = 5f
+    val multiple = 45f
+    val closest = (degrees / multiple).roundToInt() * multiple
+    return if (kotlin.math.abs(degrees - closest) <= threshold) closest else degrees
+}
