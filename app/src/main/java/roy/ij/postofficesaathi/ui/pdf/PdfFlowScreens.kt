@@ -987,7 +987,7 @@ private fun EditablePdfPlacement(
                 with(density) { cardHeightPx.toDp() }
             )
             .graphicsLayer { rotationZ = displayPlacement.rotationDegrees }
-            .pointerInput(index, pageWidthPx, pageHeightPx) {
+            .pointerInput(index, pageWidthPx, pageHeightPx, placement) {
                 var dragStartPlacement = displayPlacement
                 var totalDrag = Offset.Zero
                 detectDragGestures(
@@ -1064,6 +1064,7 @@ private fun PdfPlacedImage(
     isSelected: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val paint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             if (bitmap == null) return@Canvas
@@ -1079,7 +1080,7 @@ private fun PdfPlacedImage(
                     bitmap,
                     src,
                     dst,
-                    Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+                    paint
                 )
             }
         }
@@ -1100,6 +1101,9 @@ private fun BoxScope.PdfEditHandles(
     onRotate: (Offset) -> Unit,
     onRotateFinished: () -> Unit
 ) {
+    val currentOnRotate by rememberUpdatedState(onRotate)
+    val currentOnRotateFinished by rememberUpdatedState(onRotateFinished)
+
     ResizeHandle(ResizeCorner.TopLeft, Modifier.align(Alignment.TopStart), onResize, onResizeFinished)
     ResizeHandle(ResizeCorner.TopRight, Modifier.align(Alignment.TopEnd), onResize, onResizeFinished)
     ResizeHandle(ResizeCorner.BottomLeft, Modifier.align(Alignment.BottomStart), onResize, onResizeFinished)
@@ -1112,11 +1116,11 @@ private fun BoxScope.PdfEditHandles(
             .size(30.dp)
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragEnd = onRotateFinished,
-                    onDragCancel = onRotateFinished,
+                    onDragEnd = currentOnRotateFinished,
+                    onDragCancel = currentOnRotateFinished,
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        onRotate(dragAmount)
+                        currentOnRotate(dragAmount)
                     }
                 )
             },
@@ -1137,6 +1141,9 @@ private fun BoxScope.ResizeHandle(
     onResize: (ResizeCorner, Offset) -> Unit,
     onResizeFinished: () -> Unit
 ) {
+    val currentOnResize by rememberUpdatedState(onResize)
+    val currentOnResizeFinished by rememberUpdatedState(onResizeFinished)
+
     Surface(
         modifier = modifier
             .offset(
@@ -1152,11 +1159,11 @@ private fun BoxScope.ResizeHandle(
             .size(18.dp)
             .pointerInput(corner) {
                 detectDragGestures(
-                    onDragEnd = onResizeFinished,
-                    onDragCancel = onResizeFinished,
+                    onDragEnd = currentOnResizeFinished,
+                    onDragCancel = currentOnResizeFinished,
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        onResize(corner, dragAmount)
+                        currentOnResize(corner, dragAmount)
                     }
                 )
             },
