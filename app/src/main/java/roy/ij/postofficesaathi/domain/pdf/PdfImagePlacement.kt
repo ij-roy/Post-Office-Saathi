@@ -1,5 +1,7 @@
 package roy.ij.postofficesaathi.domain.pdf
 
+import android.graphics.BitmapFactory
+
 data class PdfImagePlacement(
     val imagePath: String,
     val x: Float,
@@ -36,20 +38,45 @@ data class PdfImagePlacement(
 
 object PdfPlacementFactory {
     const val DefaultCardWidth = 0.32f
-    const val DefaultCardHeight = DefaultCardWidth / 1.585f
     private const val FirstCardTop = 0.095f
     private const val CardGap = 0.06f
 
-    fun defaultPlacements(count: Int, imagePaths: List<String> = emptyList()): List<PdfImagePlacement> =
-        List(count) { index ->
-            PdfImagePlacement(
-                imagePath = imagePaths.getOrElse(index) { "" },
-                x = (1f - DefaultCardWidth) / 2f,
-                y = FirstCardTop + index * (DefaultCardHeight + CardGap),
-                width = DefaultCardWidth,
-                height = DefaultCardHeight
-            ).clamped()
+    fun defaultPlacements(count: Int, imagePaths: List<String> = emptyList()): List<PdfImagePlacement> {
+        val placements = mutableListOf<PdfImagePlacement>()
+        var currentY = FirstCardTop
+
+        for (index in 0 until count) {
+            val path = imagePaths.getOrElse(index) { "" }
+            var aspect = 1.585f // Fallback to typical card ratio
+
+            if (path.isNotEmpty()) {
+                try {
+                    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(path, opts)
+                    if (opts.outWidth > 0 && opts.outHeight > 0) {
+                        aspect = opts.outWidth.toFloat() / opts.outHeight.toFloat()
+                    }
+                } catch (e: Exception) {
+                    // Safety catch ensures basic layout remains safe
+                }
+            }
+
+            val dynamicHeight = DefaultCardWidth / aspect
+
+            placements.add(
+                PdfImagePlacement(
+                    imagePath = path,
+                    x = (1f - DefaultCardWidth) / 2f,
+                    y = currentY,
+                    width = DefaultCardWidth,
+                    height = dynamicHeight
+                ).clamped()
+            )
+
+            currentY += dynamicHeight + CardGap
         }
+        return placements
+    }
 
     fun reset(placements: List<PdfImagePlacement>): List<PdfImagePlacement> =
         defaultPlacements(placements.size, placements.map { it.imagePath })

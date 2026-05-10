@@ -1237,7 +1237,7 @@ private fun resizePlacement(
     dx: Float,
     dy: Float
 ): PdfImagePlacement {
-    val aspect = 1.585f
+    val aspect = if (placement.height > 0f) placement.width / placement.height else 1.585f
     val signedDelta = when (corner) {
         ResizeCorner.BottomRight -> maxOf(dx, dy * aspect)
         ResizeCorner.TopRight -> maxOf(dx, -dy * aspect)
@@ -1996,8 +1996,23 @@ private fun createCorrectedCardImage(
     index: Int
 ): File {
     val sourceBitmap = decodeBitmapRespectingExif(sourceFile) ?: error("Photo unavailable")
-    val outputWidth = 1600
-    val outputHeight = (outputWidth / 1.585f).roundToInt()
+    val w = sourceBitmap.width.toFloat()
+    val h = sourceBitmap.height.toFloat()
+
+    // Use Euclidean distance formula to measure real-world proportional width & height from user corners
+    val widthTop = kotlin.math.hypot((corners[1].x - corners[0].x) * w, (corners[1].y - corners[0].y) * h)
+    val widthBottom = kotlin.math.hypot((corners[2].x - corners[3].x) * w, (corners[2].y - corners[3].y) * h)
+    val realW = maxOf(widthTop, widthBottom)
+
+    val heightLeft = kotlin.math.hypot((corners[3].x - corners[0].x) * w, (corners[3].y - corners[0].y) * h)
+    val heightRight = kotlin.math.hypot((corners[2].x - corners[1].x) * w, (corners[2].y - corners[1].y) * h)
+    val realH = maxOf(heightLeft, heightRight)
+
+    // Automatically scale down largest dimension to 1600px for visual detail vs RAM balance
+    val maxDim = 1600f
+    val scale = maxDim / maxOf(1f, maxOf(realW, realH))
+    val outputWidth = (realW * scale).roundToInt().coerceAtLeast(100)
+    val outputHeight = (realH * scale).roundToInt().coerceAtLeast(100)
     val outputBitmap = Bitmap.createBitmap(outputWidth, outputHeight, Bitmap.Config.ARGB_8888)
     val canvas = AndroidCanvas(outputBitmap)
     canvas.drawColor(android.graphics.Color.WHITE)
