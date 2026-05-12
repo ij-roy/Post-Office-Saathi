@@ -1,5 +1,27 @@
 [
   {
+    "id": "silent-account-revival-application",
+    "title": "Silent Account Revival Application",
+    "category": "Savings Account",
+    "description": "Application for revival of a silent/dormant Post Office Savings Bank (SB) account that has been inactive due to no transactions for a long period. Requires passbook, self-attested KYC documents, and KYC update form.",
+    "keywords": [
+      "silent account",
+      "dormant account",
+      "account revival",
+      "reactivate account",
+      "inactive account",
+      "sb account revival",
+      "silent sb account",
+      "dormant sb account",
+      "post office silent account",
+      "account activation",
+      "no transaction account",
+      "revive savings account"
+    ],
+    "file": "Silent Account Revival Application.pdf",
+    "language": "English"
+  },
+  {
     "id": "form-121-declaration-no-tds",
     "title": "Form No. 121 – Declaration for Receipt of Income Without TDS",
     "category": "Tax / TDS",
