@@ -53,6 +53,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.launch
+import roy.ij.postofficesaathi.analytics.AnalyticsEvent
+import roy.ij.postofficesaathi.analytics.AnalyticsFlow
+import roy.ij.postofficesaathi.analytics.AnalyticsParam
+import roy.ij.postofficesaathi.analytics.AnalyticsSanitizer
+import roy.ij.postofficesaathi.analytics.AnalyticsScreen
+import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.forms.FormsLoadResult
 import roy.ij.postofficesaathi.data.forms.GitHubFormsRepository
 import roy.ij.postofficesaathi.domain.forms.FormItem
@@ -63,7 +69,10 @@ import roy.ij.postofficesaathi.ui.components.SaathiScreen
 import java.io.File
 
 @Composable
-fun FormsScreen(onBack: () -> Unit) {
+fun FormsScreen(
+    analytics: SaathiAnalytics,
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
     val repository = remember { GitHubFormsRepository(context.applicationContext) }
     val scope = rememberCoroutineScope()
@@ -75,11 +84,34 @@ fun FormsScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         isLoading = true
         loadResult = repository.loadForms()
+        analytics.logEvent(
+            "forms_index_loaded",
+            mapOf(
+                AnalyticsParam.Flow to AnalyticsFlow.Forms,
+                AnalyticsParam.FromCache to loadResult.isFromCache,
+                AnalyticsParam.ResultCountBucket to AnalyticsSanitizer.countBucket(loadResult.forms.size)
+            )
+        )
         activeMessage = loadResult.message
         isLoading = false
     }
 
     val visibleForms = FormSearchEngine.search(loadResult.forms, query)
+
+    LaunchedEffect(query, visibleForms.size) {
+        if (query.isNotBlank()) {
+            val params = mapOf(
+                AnalyticsParam.Flow to AnalyticsFlow.Forms,
+                AnalyticsParam.QueryTextSafe to AnalyticsSanitizer.safeSearchText(query),
+                AnalyticsParam.QueryLengthBucket to AnalyticsSanitizer.queryLengthBucket(query),
+                AnalyticsParam.ResultCountBucket to AnalyticsSanitizer.countBucket(visibleForms.size)
+            )
+            analytics.logEvent(AnalyticsEvent.FormSearch, params)
+            if (visibleForms.isEmpty()) {
+                analytics.logEvent(AnalyticsEvent.FormSearchEmpty, params)
+            }
+        }
+    }
 
     SaathiScreen {
         Column(
@@ -92,7 +124,12 @@ fun FormsScreen(onBack: () -> Unit) {
 
             SearchPanel(
                 query = query,
-                onQueryChange = { query = it }
+                onQueryChange = {
+                    if (query.isBlank() && it.isNotBlank()) {
+                        analytics.logButtonTap("forms_search_field", AnalyticsScreen.Forms)
+                    }
+                    query = it
+                }
             )
 
             AnimatedVisibility(
@@ -125,16 +162,54 @@ fun FormsScreen(onBack: () -> Unit) {
                                 form = form,
                                 onOpen = {
                                     scope.launch {
+                                        analytics.logButtonTap("form_open_or_download", AnalyticsScreen.Forms)
+                                        analytics.logEvent(
+                                            AnalyticsEvent.FormDownloadStarted,
+                                            form.analyticsParams(query)
+                                        )
                                         runCatching { repository.downloadForm(form) }
-                                            .onSuccess { openPdf(context, it) }
-                                            .onFailure { activeMessage = "Could not download this form. Please try again." }
+                                            .onSuccess {
+                                                analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, form.analyticsParams(query))
+                                                runCatching { openPdf(context, it) }
+                                                    .onSuccess {
+                                                        analytics.logEvent(AnalyticsEvent.FormOpened, form.analyticsParams(query))
+                                                    }
+                                                    .onFailure { error ->
+                                                        activeMessage = "Could not open this form. Please try again."
+                                                        analytics.recordError("form_open", error, form.analyticsParams(query))
+                                                    }
+                                            }
+                                            .onFailure { error ->
+                                                activeMessage = "Could not download this form. Please try again."
+                                                analytics.logEvent(AnalyticsEvent.FormDownloadFailed, form.analyticsParams(query, error))
+                                                analytics.recordError("form_download", error, form.analyticsParams(query))
+                                            }
                                     }
                                 },
                                 onShare = {
                                     scope.launch {
+                                        analytics.logButtonTap("form_share", AnalyticsScreen.Forms)
+                                        analytics.logEvent(
+                                            AnalyticsEvent.FormDownloadStarted,
+                                            form.analyticsParams(query)
+                                        )
                                         runCatching { repository.downloadForm(form) }
-                                            .onSuccess { sharePdf(context, it) }
-                                            .onFailure { activeMessage = "Could not share this form. Please try again." }
+                                            .onSuccess {
+                                                analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, form.analyticsParams(query))
+                                                runCatching { sharePdf(context, it) }
+                                                    .onSuccess {
+                                                        analytics.logEvent(AnalyticsEvent.FormShared, form.analyticsParams(query))
+                                                    }
+                                                    .onFailure { error ->
+                                                        activeMessage = "Could not share this form. Please try again."
+                                                        analytics.recordError("form_share", error, form.analyticsParams(query))
+                                                    }
+                                            }
+                                            .onFailure { error ->
+                                                activeMessage = "Could not share this form. Please try again."
+                                                analytics.logEvent(AnalyticsEvent.FormDownloadFailed, form.analyticsParams(query, error))
+                                                analytics.recordError("form_download", error, form.analyticsParams(query))
+                                            }
                                     }
                                 }
                             )
@@ -441,3 +516,14 @@ private fun sharePdf(context: Context, file: File) {
 
 private fun File.contentUri(context: Context): Uri =
     FileProvider.getUriForFile(context, "${context.packageName}.files", this)
+
+private fun FormItem.analyticsParams(query: String, throwable: Throwable? = null): Map<String, Any?> =
+    mapOf(
+        AnalyticsParam.Flow to AnalyticsFlow.Forms,
+        AnalyticsParam.FormId to id,
+        AnalyticsParam.FormCategory to category,
+        AnalyticsParam.FormLanguage to language,
+        AnalyticsParam.QueryTextSafe to AnalyticsSanitizer.safeSearchText(query),
+        AnalyticsParam.QueryLengthBucket to AnalyticsSanitizer.queryLengthBucket(query),
+        AnalyticsParam.ErrorType to throwable?.javaClass?.simpleName
+    )

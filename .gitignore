@@ -18,3 +18,4 @@ keystore.properties
 *.keystore
 DESIGN.md
 app/release/app-release.aab
+app/google-services.json

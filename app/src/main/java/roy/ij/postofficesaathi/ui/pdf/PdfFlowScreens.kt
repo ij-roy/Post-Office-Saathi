@@ -123,6 +123,11 @@ import org.opencv.core.MatOfPoint2f
 import org.opencv.core.Point
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import roy.ij.postofficesaathi.analytics.AnalyticsEvent
+import roy.ij.postofficesaathi.analytics.AnalyticsFlow
+import roy.ij.postofficesaathi.analytics.AnalyticsParam
+import roy.ij.postofficesaathi.analytics.AnalyticsScreen
+import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.pdf.PdfGenerator
 import roy.ij.postofficesaathi.domain.pdf.PdfImagePlacement
 import roy.ij.postofficesaathi.domain.pdf.PdfLayoutType
@@ -144,6 +149,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun PdfLayoutSelectionScreen(
+    analytics: SaathiAnalytics,
     onBack: () -> Unit,
     onLayoutSelected: (PdfLayoutType) -> Unit
 ) {
@@ -190,19 +196,28 @@ fun PdfLayoutSelectionScreen(
                                 title = "1 card",
                                 layoutType = PdfLayoutType.OneDocument,
                                 modifier = Modifier.weight(1f),
-                                onClick = onLayoutSelected
+                                onClick = { layout ->
+                                    analytics.logButtonTap("pdf_layout_one_document", AnalyticsScreen.PdfLayout)
+                                    onLayoutSelected(layout)
+                                }
                             )
                             TemplateOptionCard(
                                 title = "2 cards",
                                 layoutType = PdfLayoutType.TwoDocuments,
                                 modifier = Modifier.weight(1f),
-                                onClick = onLayoutSelected
+                                onClick = { layout ->
+                                    analytics.logButtonTap("pdf_layout_two_documents", AnalyticsScreen.PdfLayout)
+                                    onLayoutSelected(layout)
+                                }
                             )
                             TemplateOptionCard(
                                 title = "3 cards",
                                 layoutType = PdfLayoutType.ThreeCards,
                                 modifier = Modifier.weight(1f),
-                                onClick = onLayoutSelected
+                                onClick = { layout ->
+                                    analytics.logButtonTap("pdf_layout_three_cards", AnalyticsScreen.PdfLayout)
+                                    onLayoutSelected(layout)
+                                }
                             )
                         }
                     }
@@ -315,6 +330,7 @@ private fun TemplatePreview(layoutType: PdfLayoutType) {
 
 @Composable
 fun DocumentCaptureScreen(
+    analytics: SaathiAnalytics,
     layoutType: PdfLayoutType,
     onBack: () -> Unit,
     onCaptureComplete: (List<File>) -> Unit
@@ -337,6 +353,10 @@ fun DocumentCaptureScreen(
     ) { granted ->
         hasCameraPermission = granted
         permissionRequested = true
+        analytics.logEvent(
+            AnalyticsEvent.CameraPermissionResult,
+            pdfParams(layoutType) + mapOf(AnalyticsParam.Granted to granted)
+        )
     }
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -345,11 +365,22 @@ fun DocumentCaptureScreen(
             runCatching {
                 copyGalleryImageToCache(context, it, currentLabel)
             }.onSuccess { file ->
+                analytics.logButtonTap("gallery_import", AnalyticsScreen.Capture)
+                analytics.logEvent(
+                    AnalyticsEvent.GalleryImportSucceeded,
+                    pdfParams(layoutType) + mapOf(AnalyticsParam.CaptureSource to "gallery")
+                )
+                analytics.setContext(AnalyticsParam.CaptureSource, "gallery")
                 currentCapture = file
                 photoToAdjust = file
                 captureError = null
-            }.onFailure {
+            }.onFailure { error ->
                 captureError = "Could not open this image. Please try another one."
+                analytics.logEvent(
+                    AnalyticsEvent.GalleryImportFailed,
+                    pdfParams(layoutType, error) + mapOf(AnalyticsParam.CaptureSource to "gallery")
+                )
+                analytics.recordError("gallery_import", error, pdfParams(layoutType))
             }
         }
     }
@@ -362,10 +393,13 @@ fun DocumentCaptureScreen(
 
     photoToAdjust?.let { file ->
         ImmediateCornerCorrectionScreen(
+            analytics = analytics,
+            layoutType = layoutType,
             file = file,
             progressText = "${currentIndex + 1}/${layoutType.documentLabels.size}",
             onBack = { photoToAdjust = null },
             onRetake = {
+                analytics.logButtonTap("capture_retake_after_adjust", AnalyticsScreen.Capture)
                 file.delete()
                 currentCapture = null
                 photoToAdjust = null
@@ -373,6 +407,10 @@ fun DocumentCaptureScreen(
             onAdjusted = { corrected ->
                 val nextFiles = capturedFiles + corrected
                 if (currentIndex == layoutType.documentLabels.lastIndex) {
+                    analytics.logEvent(
+                        AnalyticsEvent.CaptureSucceeded,
+                        pdfParams(layoutType) + mapOf(AnalyticsParam.ImageCount to nextFiles.size)
+                    )
                     onCaptureComplete(nextFiles)
                 } else {
                     capturedFiles = nextFiles
@@ -402,7 +440,10 @@ fun DocumentCaptureScreen(
                     )
                     SaathiPrimaryButton(
                         text = "Allow Camera",
-                        onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }
+                        onClick = {
+                            analytics.logButtonTap("camera_permission_request", AnalyticsScreen.Capture)
+                            permissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
                     )
                 }
             }
@@ -463,6 +504,12 @@ fun DocumentCaptureScreen(
             CameraCaptureControls(
                 isLandscape = isLandscape,
                 onCapture = {
+                    analytics.logButtonTap("camera_capture", AnalyticsScreen.Capture)
+                    analytics.logEvent(
+                        AnalyticsEvent.CaptureStarted,
+                        pdfParams(layoutType) + mapOf(AnalyticsParam.CaptureSource to "camera")
+                    )
+                    analytics.setContext(AnalyticsParam.CaptureSource, "camera")
                     captureError = null
                     capturePhoto(
                         context = context,
@@ -472,10 +519,20 @@ fun DocumentCaptureScreen(
                             currentCapture = it
                             photoToAdjust = it
                         },
-                        onError = { captureError = "Could not capture photo. Please try again." }
+                        onError = { error ->
+                            captureError = "Could not capture photo. Please try again."
+                            analytics.logEvent(
+                                AnalyticsEvent.CaptureFailed,
+                                pdfParams(layoutType, error) + mapOf(AnalyticsParam.CaptureSource to "camera")
+                            )
+                            analytics.recordError("capture", error, pdfParams(layoutType))
+                        }
                     )
                 },
-                onGallery = { galleryLauncher.launch("image/*") },
+                onGallery = {
+                    analytics.logButtonTap("gallery_pick", AnalyticsScreen.Capture)
+                    galleryLauncher.launch("image/*")
+                },
                 modifier = if (isLandscape) {
                     Modifier
                         .align(Alignment.CenterEnd)
@@ -507,6 +564,7 @@ fun DocumentCaptureScreen(
                 CameraPillButton(
                     text = "Retake",
                     onClick = {
+                        analytics.logButtonTap("capture_retake", AnalyticsScreen.Capture)
                         currentCapture?.delete()
                         currentCapture = null
                         captureError = null
@@ -516,6 +574,7 @@ fun DocumentCaptureScreen(
                 CameraPillButton(
                     text = if (currentIndex == layoutType.documentLabels.lastIndex) "Review" else "Use photo",
                     onClick = {
+                        analytics.logButtonTap("capture_use_photo", AnalyticsScreen.Capture)
                         photoToAdjust = currentCapture
                     },
                     modifier = Modifier.weight(1f),
@@ -528,6 +587,7 @@ fun DocumentCaptureScreen(
 
 @Composable
 fun CornerAdjustmentScreen(
+    analytics: SaathiAnalytics,
     layoutType: PdfLayoutType,
     capturedFiles: List<File>,
     onBack: () -> Unit,
@@ -607,10 +667,18 @@ fun CornerAdjustmentScreen(
                 .padding(horizontal = 18.dp, vertical = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CameraPillButton("Retake", onBack, Modifier.weight(1f))
+            CameraPillButton(
+                "Retake",
+                onClick = {
+                    analytics.logButtonTap("corner_retake", AnalyticsScreen.Corners)
+                    onBack()
+                },
+                modifier = Modifier.weight(1f)
+            )
             CameraPillButton(
                 text = if (currentIndex == capturedFiles.lastIndex) "Apply" else "Next",
                 onClick = {
+                    analytics.logButtonTap("corner_apply", AnalyticsScreen.Corners)
                     val source = currentFile ?: return@CameraPillButton
                     runCatching {
                         createCorrectedCardImage(context, source, corners, currentIndex)
@@ -623,8 +691,9 @@ fun CornerAdjustmentScreen(
                             currentIndex += 1
                             error = null
                         }
-                    }.onFailure {
+                    }.onFailure { failure ->
                         error = "Could not adjust this photo. Please try again."
+                        analytics.recordError("image_adjust", failure, pdfParams(layoutType))
                     }
                 },
                 modifier = Modifier.weight(1f),
@@ -636,6 +705,8 @@ fun CornerAdjustmentScreen(
 
 @Composable
 private fun ImmediateCornerCorrectionScreen(
+    analytics: SaathiAnalytics,
+    layoutType: PdfLayoutType,
     file: File,
     progressText: String,
     onBack: () -> Unit,
@@ -644,7 +715,9 @@ private fun ImmediateCornerCorrectionScreen(
 ) {
     val context = LocalContext.current
     var workingFile by remember(file.absolutePath) { mutableStateOf(file) }
-    var corners by remember(workingFile.absolutePath) { mutableStateOf(detectDocumentCorners(workingFile)) }
+    var corners by remember(workingFile.absolutePath) {
+        mutableStateOf(detectDocumentCorners(workingFile, analytics, layoutType))
+    }
     var error by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -711,32 +784,53 @@ private fun ImmediateCornerCorrectionScreen(
                 .padding(horizontal = 14.dp, vertical = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CameraPillButton("Retake", onRetake, Modifier.weight(1.05f))
+            CameraPillButton(
+                "Retake",
+                onClick = {
+                    analytics.logButtonTap("corner_retake", AnalyticsScreen.Capture)
+                    onRetake()
+                },
+                modifier = Modifier.weight(1.05f)
+            )
             CameraPillButton(
                 "Left",
                 onClick = {
+                    analytics.logButtonTap("image_rotate_left", AnalyticsScreen.Capture)
                     runCatching { rotateImageFile(context, workingFile, clockwise = false) }
                         .onSuccess { workingFile = it }
-                        .onFailure { error = "Could not rotate image." }
+                        .onFailure { failure ->
+                            error = "Could not rotate image."
+                            analytics.recordError("image_rotate", failure, pdfParams(layoutType))
+                        }
                 },
                 modifier = Modifier.weight(0.8f)
             )
             CameraPillButton(
                 "Right",
                 onClick = {
+                    analytics.logButtonTap("image_rotate_right", AnalyticsScreen.Capture)
                     runCatching { rotateImageFile(context, workingFile, clockwise = true) }
                         .onSuccess { workingFile = it }
-                        .onFailure { error = "Could not rotate image." }
+                        .onFailure { failure ->
+                            error = "Could not rotate image."
+                            analytics.recordError("image_rotate", failure, pdfParams(layoutType))
+                        }
                 },
                 modifier = Modifier.weight(0.8f)
             )
             CameraPillButton(
                 "Apply",
                 onClick = {
+                    analytics.logButtonTap("image_adjust_apply", AnalyticsScreen.Capture)
                     runCatching {
                         createCorrectedCardImage(context, workingFile, corners, 0)
-                    }.onSuccess(onAdjusted)
-                        .onFailure { error = "Could not adjust this photo. Please try again." }
+                    }.onSuccess {
+                        analytics.logEvent(AnalyticsEvent.ImageAdjusted, pdfParams(layoutType))
+                        onAdjusted(it)
+                    }.onFailure { failure ->
+                        error = "Could not adjust this photo. Please try again."
+                        analytics.recordError("image_adjust", failure, pdfParams(layoutType))
+                    }
                 },
                 modifier = Modifier.weight(1f),
                 primary = true
@@ -747,6 +841,7 @@ private fun ImmediateCornerCorrectionScreen(
 
 @Composable
 fun PdfPreviewEditorScreen(
+    analytics: SaathiAnalytics,
     layoutType: PdfLayoutType,
     capturedFiles: List<File>,
     placements: List<PdfImagePlacement>,
@@ -766,6 +861,8 @@ fun PdfPreviewEditorScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
+                        analytics.logButtonTap("pdf_preview_reset_confirm", AnalyticsScreen.Preview)
+                        analytics.logEvent(AnalyticsEvent.PdfPreviewReset, pdfParams(layoutType))
                         undoStack = undoStack + listOf(currentPlacements)
                         currentPlacements = PdfPlacementFactory.reset(currentPlacements)
                         selectedIndex = null
@@ -816,6 +913,7 @@ fun PdfPreviewEditorScreen(
                         UndoIconButton(
                             enabled = undoStack.isNotEmpty(),
                             onClick = {
+                                analytics.logButtonTap("pdf_preview_undo", AnalyticsScreen.Preview)
                                 val previous = undoStack.lastOrNull() ?: return@UndoIconButton
                                 undoStack = undoStack.dropLast(1)
                                 currentPlacements = previous
@@ -1268,6 +1366,7 @@ private fun resizePlacement(
 
 @Composable
 fun PdfNameInputScreen(
+    analytics: SaathiAnalytics,
     layoutType: PdfLayoutType,
     capturedFiles: List<File>,
     placements: List<PdfImagePlacement>,
@@ -1341,10 +1440,24 @@ fun PdfNameInputScreen(
         SaathiPrimaryButton(
             text = "Save PDF",
             onClick = {
+                analytics.logButtonTap("pdf_save", AnalyticsScreen.Name)
+                analytics.logEvent(
+                    AnalyticsEvent.PdfCreateStarted,
+                    pdfParams(layoutType) + mapOf(AnalyticsParam.ImageCount to capturedFiles.size)
+                )
                 runCatching {
                     PdfGenerator.createPdf(context, customerName, layoutType, capturedFiles, placements)
-                }.onSuccess(onPdfCreated)
-                    .onFailure { error = "Could not create PDF. Please try again." }
+                }.onSuccess {
+                    analytics.logEvent(
+                        AnalyticsEvent.PdfCreateSucceeded,
+                        pdfParams(layoutType) + mapOf(AnalyticsParam.ImageCount to capturedFiles.size)
+                    )
+                    onPdfCreated(it)
+                }.onFailure { failure ->
+                    error = "Could not create PDF. Please try again."
+                    analytics.logEvent(AnalyticsEvent.PdfCreateFailed, pdfParams(layoutType, failure))
+                    analytics.recordError("pdf_create", failure, pdfParams(layoutType))
+                }
             }
         )
     }
@@ -1352,6 +1465,7 @@ fun PdfNameInputScreen(
 
 @Composable
 fun PdfCreatedSuccessScreen(
+    analytics: SaathiAnalytics,
     pdfPath: String?,
     onCreateAnother: () -> Unit,
     onHome: () -> Unit
@@ -1368,12 +1482,26 @@ fun PdfCreatedSuccessScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SaathiSecondaryButton(
                 "Open",
-                onClick = { file?.let { openPdf(context, it) } },
+                onClick = {
+                    analytics.logButtonTap("pdf_success_open", AnalyticsScreen.Success)
+                    file?.let {
+                        runCatching { openPdf(context, it) }
+                            .onSuccess { analytics.logEvent(AnalyticsEvent.PdfOpened, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
+                            .onFailure { error -> analytics.recordError("pdf_open", error, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
+                    }
+                },
                 modifier = Modifier.weight(1f)
             )
             SaathiSecondaryButton(
                 "Share",
-                onClick = { file?.let { sharePdf(context, it) } },
+                onClick = {
+                    analytics.logButtonTap("pdf_success_share", AnalyticsScreen.Success)
+                    file?.let {
+                        runCatching { sharePdf(context, it) }
+                            .onSuccess { analytics.logEvent(AnalyticsEvent.PdfShared, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
+                            .onFailure { error -> analytics.recordError("pdf_share", error, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
+                    }
+                },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -2244,13 +2372,23 @@ private fun defaultCorners(): List<NormalizedCorner> = listOf(
     NormalizedCorner(0.10f, 0.66f)
 )
 
-private fun detectDocumentCorners(file: File): List<NormalizedCorner> {
+private fun detectDocumentCorners(
+    file: File,
+    analytics: SaathiAnalytics,
+    layoutType: PdfLayoutType
+): List<NormalizedCorner> {
     val bitmap = decodeBitmapRespectingExif(file) ?: return defaultCorners()
     val detected = runCatching {
         require(OpenCVLoader.initLocal()) { "OpenCV could not initialize" }
         detectDocumentCornersWithOpenCv(bitmap)
+    }.onFailure { error ->
+        analytics.recordError("corner_detection", error, pdfParams(layoutType))
     }.getOrNull()
     bitmap.recycle()
+    analytics.logEvent(
+        AnalyticsEvent.CornerDetectionResult,
+        pdfParams(layoutType) + mapOf(AnalyticsParam.UsedFallback to (detected == null))
+    )
     return detected ?: defaultCorners()
 }
 
@@ -2429,3 +2567,17 @@ private fun snapRotation(degrees: Float): Float {
     val closest = (degrees / multiple).roundToInt() * multiple
     return if (kotlin.math.abs(degrees - closest) <= threshold) closest else degrees
 }
+
+private fun PdfLayoutType.analyticsName(): String =
+    when (this) {
+        PdfLayoutType.OneDocument -> "one_document"
+        PdfLayoutType.TwoDocuments -> "two_documents"
+        PdfLayoutType.ThreeCards -> "three_cards"
+    }
+
+private fun pdfParams(layoutType: PdfLayoutType, throwable: Throwable? = null): Map<String, Any?> =
+    mapOf(
+        AnalyticsParam.Flow to AnalyticsFlow.Pdf,
+        AnalyticsParam.LayoutType to layoutType.analyticsName(),
+        AnalyticsParam.ErrorType to throwable?.javaClass?.simpleName
+    )
