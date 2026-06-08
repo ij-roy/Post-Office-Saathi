@@ -39,10 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -52,67 +49,59 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import kotlinx.coroutines.launch
-import roy.ij.postofficesaathi.analytics.AnalyticsEvent
-import roy.ij.postofficesaathi.analytics.AnalyticsFlow
-import roy.ij.postofficesaathi.analytics.AnalyticsParam
-import roy.ij.postofficesaathi.analytics.AnalyticsSanitizer
-import roy.ij.postofficesaathi.analytics.AnalyticsScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
-import roy.ij.postofficesaathi.data.forms.FormsLoadResult
-import roy.ij.postofficesaathi.data.forms.GitHubFormsRepository
 import roy.ij.postofficesaathi.domain.forms.FormItem
-import roy.ij.postofficesaathi.domain.forms.FormSearchEngine
 import roy.ij.postofficesaathi.ui.components.PagePadding
 import roy.ij.postofficesaathi.ui.components.SaathiCard
 import roy.ij.postofficesaathi.ui.components.SaathiScreen
 import java.io.File
 
 @Composable
-fun FormsScreen(
+fun FormsRoute(
     analytics: SaathiAnalytics,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = remember { GitHubFormsRepository(context.applicationContext) }
-    val scope = rememberCoroutineScope()
-    var loadResult by remember { mutableStateOf(FormsLoadResult(emptyList(), isFromCache = true)) }
-    var query by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(true) }
-    var activeMessage by remember { mutableStateOf<String?>(null) }
+    val factory = remember(context, analytics) { FormsViewModel.Factory(context, analytics) }
+    val viewModel: FormsViewModel = viewModel(factory = factory)
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        isLoading = true
-        loadResult = repository.loadForms()
-        analytics.logEvent(
-            "forms_index_loaded",
-            mapOf(
-                AnalyticsParam.Flow to AnalyticsFlow.Forms,
-                AnalyticsParam.FromCache to loadResult.isFromCache,
-                AnalyticsParam.ResultCountBucket to AnalyticsSanitizer.countBucket(loadResult.forms.size)
-            )
-        )
-        activeMessage = loadResult.message
-        isLoading = false
-    }
-
-    val visibleForms = FormSearchEngine.search(loadResult.forms, query)
-
-    LaunchedEffect(query, visibleForms.size) {
-        if (query.isNotBlank()) {
-            val params = mapOf(
-                AnalyticsParam.Flow to AnalyticsFlow.Forms,
-                AnalyticsParam.QueryTextSafe to AnalyticsSanitizer.safeSearchText(query),
-                AnalyticsParam.QueryLengthBucket to AnalyticsSanitizer.queryLengthBucket(query),
-                AnalyticsParam.ResultCountBucket to AnalyticsSanitizer.countBucket(visibleForms.size)
-            )
-            analytics.logEvent(AnalyticsEvent.FormSearch, params)
-            if (visibleForms.isEmpty()) {
-                analytics.logEvent(AnalyticsEvent.FormSearchEmpty, params)
+    LaunchedEffect(viewModel) {
+        viewModel.externalActions.collect { action ->
+            when (action) {
+                is FormsExternalAction.OpenPdf -> {
+                    runCatching { openPdf(context, action.file) }
+                        .onSuccess { viewModel.onFormOpened(action.form, action.query) }
+                        .onFailure { viewModel.onExternalActionFailed("form_open", it, action.form, action.query) }
+                }
+                is FormsExternalAction.SharePdf -> {
+                    runCatching { sharePdf(context, action.file) }
+                        .onSuccess { viewModel.onFormShared(action.form, action.query) }
+                        .onFailure { viewModel.onExternalActionFailed("form_share", it, action.form, action.query) }
+                }
             }
         }
     }
 
+    FormsScreen(
+        state = state,
+        onBack = onBack,
+        onQueryChange = viewModel::updateQuery,
+        onOpen = viewModel::openForm,
+        onShare = viewModel::shareForm
+    )
+}
+
+@Composable
+fun FormsScreen(
+    state: FormsUiState,
+    onBack: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onOpen: (FormItem) -> Unit,
+    onShare: (FormItem) -> Unit
+) {
     SaathiScreen {
         Column(
             modifier = Modifier
@@ -123,21 +112,16 @@ fun FormsScreen(
             FormsTopBar(onBack = onBack)
 
             SearchPanel(
-                query = query,
-                onQueryChange = {
-                    if (query.isBlank() && it.isNotBlank()) {
-                        analytics.logButtonTap("forms_search_field", AnalyticsScreen.Forms)
-                    }
-                    query = it
-                }
+                query = state.query,
+                onQueryChange = onQueryChange
             )
 
             AnimatedVisibility(
-                visible = activeMessage != null,
+                visible = state.activeMessage != null,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                activeMessage?.let {
+                state.activeMessage?.let {
                     SaathiCard {
                         Text(it, style = MaterialTheme.typography.bodyMedium)
                     }
@@ -146,72 +130,22 @@ fun FormsScreen(
 
             AnimatedContent(
                 targetState = when {
-                    isLoading -> "loading"
-                    visibleForms.isEmpty() -> "empty"
+                    state.isLoading -> "loading"
+                    state.visibleForms.isEmpty() -> "empty"
                     else -> "list"
                 },
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
                 label = "formsContent"
-            ) { state ->
-                when (state) {
+            ) { contentState ->
+                when (contentState) {
                     "loading" -> SkeletonFormsContent()
-                    "empty" -> EmptyFormsState(query)
+                    "empty" -> EmptyFormsState(state.query)
                     else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(visibleForms, key = { it.id }) { form ->
+                        items(state.visibleForms, key = { it.id }) { form ->
                             FormRow(
                                 form = form,
-                                onOpen = {
-                                    scope.launch {
-                                        analytics.logButtonTap("form_open_or_download", AnalyticsScreen.Forms)
-                                        analytics.logEvent(
-                                            AnalyticsEvent.FormDownloadStarted,
-                                            form.analyticsParams(query)
-                                        )
-                                        runCatching { repository.downloadForm(form) }
-                                            .onSuccess {
-                                                analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, form.analyticsParams(query))
-                                                runCatching { openPdf(context, it) }
-                                                    .onSuccess {
-                                                        analytics.logEvent(AnalyticsEvent.FormOpened, form.analyticsParams(query))
-                                                    }
-                                                    .onFailure { error ->
-                                                        activeMessage = "Could not open this form. Please try again."
-                                                        analytics.recordError("form_open", error, form.analyticsParams(query))
-                                                    }
-                                            }
-                                            .onFailure { error ->
-                                                activeMessage = "Could not download this form. Please try again."
-                                                analytics.logEvent(AnalyticsEvent.FormDownloadFailed, form.analyticsParams(query, error))
-                                                analytics.recordError("form_download", error, form.analyticsParams(query))
-                                            }
-                                    }
-                                },
-                                onShare = {
-                                    scope.launch {
-                                        analytics.logButtonTap("form_share", AnalyticsScreen.Forms)
-                                        analytics.logEvent(
-                                            AnalyticsEvent.FormDownloadStarted,
-                                            form.analyticsParams(query)
-                                        )
-                                        runCatching { repository.downloadForm(form) }
-                                            .onSuccess {
-                                                analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, form.analyticsParams(query))
-                                                runCatching { sharePdf(context, it) }
-                                                    .onSuccess {
-                                                        analytics.logEvent(AnalyticsEvent.FormShared, form.analyticsParams(query))
-                                                    }
-                                                    .onFailure { error ->
-                                                        activeMessage = "Could not share this form. Please try again."
-                                                        analytics.recordError("form_share", error, form.analyticsParams(query))
-                                                    }
-                                            }
-                                            .onFailure { error ->
-                                                activeMessage = "Could not share this form. Please try again."
-                                                analytics.logEvent(AnalyticsEvent.FormDownloadFailed, form.analyticsParams(query, error))
-                                                analytics.recordError("form_download", error, form.analyticsParams(query))
-                                            }
-                                    }
-                                }
+                                onOpen = { onOpen(form) },
+                                onShare = { onShare(form) }
                             )
                         }
                     }
@@ -516,14 +450,3 @@ private fun sharePdf(context: Context, file: File) {
 
 private fun File.contentUri(context: Context): Uri =
     FileProvider.getUriForFile(context, "${context.packageName}.files", this)
-
-private fun FormItem.analyticsParams(query: String, throwable: Throwable? = null): Map<String, Any?> =
-    mapOf(
-        AnalyticsParam.Flow to AnalyticsFlow.Forms,
-        AnalyticsParam.FormId to id,
-        AnalyticsParam.FormCategory to category,
-        AnalyticsParam.FormLanguage to language,
-        AnalyticsParam.QueryTextSafe to AnalyticsSanitizer.safeSearchText(query),
-        AnalyticsParam.QueryLengthBucket to AnalyticsSanitizer.queryLengthBucket(query),
-        AnalyticsParam.ErrorType to throwable?.javaClass?.simpleName
-    )

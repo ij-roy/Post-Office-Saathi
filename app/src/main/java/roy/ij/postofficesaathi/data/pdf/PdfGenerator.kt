@@ -33,9 +33,9 @@ object PdfGenerator {
         )
     ): File {
         val outputDir = File(context.filesDir, "created-pdfs").apply { mkdirs() }
-        val outputFile = File(
-            outputDir,
-            PdfFileNameFactory.create(customerName, layoutType, LocalDate.now())
+        val outputFile = PdfOutputFileFactory.nextAvailableFile(
+            outputDir = outputDir,
+            baseFileName = PdfFileNameFactory.create(customerName, layoutType, LocalDate.now())
         )
 
         val document = PdfDocument()

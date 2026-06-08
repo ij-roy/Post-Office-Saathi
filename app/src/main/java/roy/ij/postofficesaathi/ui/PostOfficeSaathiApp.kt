@@ -1,16 +1,16 @@
 package roy.ij.postofficesaathi.ui
 
 import android.os.SystemClock
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -19,24 +19,21 @@ import roy.ij.postofficesaathi.analytics.AnalyticsFlow
 import roy.ij.postofficesaathi.analytics.AnalyticsParam
 import roy.ij.postofficesaathi.analytics.AnalyticsScreen
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
-import roy.ij.postofficesaathi.domain.pdf.PdfImagePlacement
-import roy.ij.postofficesaathi.domain.pdf.PdfLayoutType
-import roy.ij.postofficesaathi.domain.pdf.PdfPlacementFactory
-import roy.ij.postofficesaathi.ui.forms.FormsScreen
+import roy.ij.postofficesaathi.ui.forms.FormsRoute
 import roy.ij.postofficesaathi.ui.home.HomeScreen
-import roy.ij.postofficesaathi.ui.pdf.CornerAdjustmentScreen
 import roy.ij.postofficesaathi.ui.pdf.DocumentCaptureScreen
+import roy.ij.postofficesaathi.ui.pdf.PdfFlowViewModel
 import roy.ij.postofficesaathi.ui.pdf.PdfCreatedSuccessScreen
 import roy.ij.postofficesaathi.ui.pdf.PdfLayoutSelectionScreen
 import roy.ij.postofficesaathi.ui.pdf.PdfNameInputScreen
 import roy.ij.postofficesaathi.ui.pdf.PdfPreviewEditorScreen
+import roy.ij.postofficesaathi.ui.pdf.analyticsName
 
 private object Routes {
     const val Home = "home"
     const val Forms = "forms"
     const val PdfLayout = "pdf-layout"
     const val Capture = "capture"
-    const val Corners = "corners"
     const val Preview = "preview"
     const val Name = "name"
     const val Success = "success"
@@ -44,11 +41,11 @@ private object Routes {
 
 @Composable
 fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
+    val context = LocalContext.current
     val navController = rememberNavController()
-    var selectedLayout by remember { mutableStateOf(PdfLayoutType.OneDocument) }
-    val capturedFiles = remember { mutableStateListOf<java.io.File>() }
-    var pdfPlacements by remember { mutableStateOf<List<PdfImagePlacement>>(emptyList()) }
-    var createdPdfPath by remember { mutableStateOf<String?>(null) }
+    val pdfFlowFactory = remember(context, analytics) { PdfFlowViewModel.Factory(context, analytics) }
+    val pdfFlowViewModel: PdfFlowViewModel = viewModel(key = "pdf-flow", factory = pdfFlowFactory)
+    val pdfState by pdfFlowViewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold { paddingValues ->
         NavHost(
@@ -73,7 +70,7 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
             }
             composable(Routes.Forms) {
                 TrackScreen(analytics, AnalyticsScreen.Forms)
-                FormsScreen(
+                FormsRoute(
                     analytics = analytics,
                     onBack = {
                         analytics.logButtonTap("forms_back", AnalyticsScreen.Forms)
@@ -98,9 +95,7 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
                             )
                         )
                         analytics.setContext(AnalyticsParam.LayoutType, it.analyticsName())
-                        selectedLayout = it
-                        capturedFiles.clear()
-                        pdfPlacements = emptyList()
+                        pdfFlowViewModel.selectLayout(it)
                         navController.navigate(Routes.Capture)
                     }
                 )
@@ -109,33 +104,14 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
                 TrackScreen(analytics, AnalyticsScreen.Capture)
                 DocumentCaptureScreen(
                     analytics = analytics,
-                    layoutType = selectedLayout,
+                    layoutType = pdfState.selectedLayout,
+                    pdfFlowViewModel = pdfFlowViewModel,
                     onBack = {
                         analytics.logButtonTap("capture_back", AnalyticsScreen.Capture)
                         navController.popBackStack()
                     },
                     onCaptureComplete = { files ->
-                        capturedFiles.clear()
-                        capturedFiles.addAll(files)
-                        pdfPlacements = PdfPlacementFactory.defaultPlacements(files.size, files.map { it.absolutePath })
-                        navController.navigate(Routes.Preview)
-                    }
-                )
-            }
-            composable(Routes.Corners) {
-                TrackScreen(analytics, AnalyticsScreen.Corners)
-                CornerAdjustmentScreen(
-                    analytics = analytics,
-                    layoutType = selectedLayout,
-                    capturedFiles = capturedFiles,
-                    onBack = {
-                        analytics.logButtonTap("corner_back", AnalyticsScreen.Corners)
-                        navController.popBackStack()
-                    },
-                    onAdjusted = { files ->
-                        capturedFiles.clear()
-                        capturedFiles.addAll(files)
-                        pdfPlacements = PdfPlacementFactory.defaultPlacements(files.size, files.map { it.absolutePath })
+                        pdfFlowViewModel.setCapturedFiles(files)
                         navController.navigate(Routes.Preview)
                     }
                 )
@@ -144,16 +120,16 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
                 TrackScreen(analytics, AnalyticsScreen.Preview)
                 PdfPreviewEditorScreen(
                     analytics = analytics,
-                    layoutType = selectedLayout,
-                    capturedFiles = capturedFiles,
-                    placements = pdfPlacements,
+                    layoutType = pdfState.selectedLayout,
+                    capturedFiles = pdfState.capturedFiles,
+                    placements = pdfState.placements,
                     onBack = {
                         analytics.logButtonTap("pdf_preview_back", AnalyticsScreen.Preview)
                         navController.popBackStack()
                     },
                     onContinue = { placements ->
                         analytics.logButtonTap("pdf_preview_continue", AnalyticsScreen.Preview)
-                        pdfPlacements = placements
+                        pdfFlowViewModel.setPlacements(placements)
                         navController.navigate(Routes.Name)
                     }
                 )
@@ -162,24 +138,20 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
                 TrackScreen(analytics, AnalyticsScreen.Name)
                 PdfNameInputScreen(
                     analytics = analytics,
-                    layoutType = selectedLayout,
-                    capturedFiles = capturedFiles,
-                    placements = pdfPlacements,
+                    state = pdfState,
+                    viewModel = pdfFlowViewModel,
                     onBack = {
                         analytics.logButtonTap("pdf_name_back", AnalyticsScreen.Name)
                         navController.popBackStack()
                     },
-                    onPdfCreated = { file ->
-                        createdPdfPath = file.absolutePath
-                        navController.navigate(Routes.Success)
-                    }
+                    onPdfCreated = { navController.navigate(Routes.Success) }
                 )
             }
             composable(Routes.Success) {
                 TrackScreen(analytics, AnalyticsScreen.Success)
                 PdfCreatedSuccessScreen(
                     analytics = analytics,
-                    pdfPath = createdPdfPath,
+                    pdfPath = pdfState.createdPdfPath,
                     onCreateAnother = {
                         analytics.logButtonTap("pdf_success_create_another", AnalyticsScreen.Success)
                         navController.popBackStack(Routes.PdfLayout, inclusive = false)
@@ -204,10 +176,3 @@ private fun TrackScreen(analytics: SaathiAnalytics, screen: String) {
         }
     }
 }
-
-private fun PdfLayoutType.analyticsName(): String =
-    when (this) {
-        PdfLayoutType.OneDocument -> "one_document"
-        PdfLayoutType.TwoDocuments -> "two_documents"
-        PdfLayoutType.ThreeCards -> "three_cards"
-    }
