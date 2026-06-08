@@ -10,11 +10,14 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import androidx.exifinterface.media.ExifInterface
+import roy.ij.postofficesaathi.data.storage.PublicDocumentRef
+import roy.ij.postofficesaathi.data.storage.PublicDocumentStorage
 import roy.ij.postofficesaathi.domain.pdf.PdfFileNameFactory
 import roy.ij.postofficesaathi.domain.pdf.PdfImagePlacement
 import roy.ij.postofficesaathi.domain.pdf.PdfLayoutType
 import roy.ij.postofficesaathi.domain.pdf.PdfPlacementFactory
 import java.io.File
+import java.io.OutputStream
 import java.time.LocalDate
 
 object PdfGenerator {
@@ -31,13 +34,18 @@ object PdfGenerator {
             imageFiles.size,
             imageFiles.map { it.absolutePath }
         )
-    ): File {
-        val outputDir = File(context.filesDir, "created-pdfs").apply { mkdirs() }
-        val outputFile = PdfOutputFileFactory.nextAvailableFile(
-            outputDir = outputDir,
-            baseFileName = PdfFileNameFactory.create(customerName, layoutType, LocalDate.now())
-        )
+    ): PublicDocumentRef {
+        val baseFileName = PdfFileNameFactory.create(customerName, layoutType, LocalDate.now())
+        return PublicDocumentStorage.savePdf(context, baseFileName) { output ->
+            writePdf(output, imageFiles, placements)
+        }
+    }
 
+    private fun writePdf(
+        output: OutputStream,
+        imageFiles: List<File>,
+        placements: List<PdfImagePlacement>
+    ) {
         val document = PdfDocument()
         val pageInfo = PdfDocument.PageInfo.Builder(A4_WIDTH, A4_HEIGHT, 1).create()
         val page = document.startPage(pageInfo)
@@ -85,9 +93,8 @@ object PdfGenerator {
         }
 
         document.finishPage(page)
-        outputFile.outputStream().use { document.writeTo(it) }
+        document.writeTo(output)
         document.close()
-        return outputFile
     }
 
     private fun decodePdfBitmap(file: File): Bitmap? {

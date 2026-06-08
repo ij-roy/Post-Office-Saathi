@@ -1,6 +1,7 @@
 package roy.ij.postofficesaathi.data.pdf
 
 import android.content.Context
+import roy.ij.postofficesaathi.data.storage.PublicDocumentRef
 import roy.ij.postofficesaathi.domain.pdf.PdfImagePlacement
 import roy.ij.postofficesaathi.domain.pdf.PdfLayoutType
 import java.io.File
@@ -11,7 +12,7 @@ class PdfCreationUseCase(private val context: Context) {
         layoutType: PdfLayoutType,
         imagePaths: List<String>,
         placements: List<PdfImagePlacement>
-    ): File =
+    ): PublicDocumentRef =
         PdfGenerator.createPdf(
             context = context,
             customerName = customerName,

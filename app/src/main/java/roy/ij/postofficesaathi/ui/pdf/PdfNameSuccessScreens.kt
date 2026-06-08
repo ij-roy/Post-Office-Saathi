@@ -244,24 +244,24 @@ fun PdfNameInputScreen(
 fun PdfCreatedSuccessScreen(
     analytics: SaathiAnalytics,
     pdfPath: String?,
+    pdfName: String?,
     onCreateAnother: () -> Unit,
     onHome: () -> Unit
 ) {
     val context = LocalContext.current
-    val file = pdfPath?.let(::File)
 
     PdfPage(
         title = "PDF Created",
         subtitle = "Your document is ready.",
         onBack = onHome
     ) {
-        PdfSuccessHero(fileName = file?.name)
+        PdfSuccessHero(fileName = pdfName ?: pdfPath?.substringAfterLast('/'))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SaathiSecondaryButton(
                 "Open",
                 onClick = {
                     analytics.logButtonTap("pdf_success_open", AnalyticsScreen.Success)
-                    file?.let {
+                    pdfPath?.let {
                         runCatching { openPdf(context, it) }
                             .onSuccess { analytics.logEvent(AnalyticsEvent.PdfOpened, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
                             .onFailure { error -> analytics.recordError("pdf_open", error, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
@@ -273,7 +273,7 @@ fun PdfCreatedSuccessScreen(
                 "Share",
                 onClick = {
                     analytics.logButtonTap("pdf_success_share", AnalyticsScreen.Success)
-                    file?.let {
+                    pdfPath?.let {
                         runCatching { sharePdf(context, it) }
                             .onSuccess { analytics.logEvent(AnalyticsEvent.PdfShared, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
                             .onFailure { error -> analytics.recordError("pdf_share", error, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
@@ -581,8 +581,8 @@ private fun LayoutPreview(layoutType: PdfLayoutType) {
     }
 }
 
-private fun openPdf(context: Context, file: File) {
-    val uri = file.contentUri(context)
+private fun openPdf(context: Context, uriString: String) {
+    val uri = uriString.toDocumentUri(context)
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, "application/pdf")
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -590,8 +590,8 @@ private fun openPdf(context: Context, file: File) {
     context.startActivity(Intent.createChooser(intent, "Open PDF"))
 }
 
-private fun sharePdf(context: Context, file: File) {
-    val uri = file.contentUri(context)
+private fun sharePdf(context: Context, uriString: String) {
+    val uri = uriString.toDocumentUri(context)
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "application/pdf"
         putExtra(Intent.EXTRA_STREAM, uri)
@@ -600,6 +600,10 @@ private fun sharePdf(context: Context, file: File) {
     context.startActivity(Intent.createChooser(intent, "Share PDF"))
 }
 
-private fun File.contentUri(context: Context): Uri =
-    FileProvider.getUriForFile(context, "${context.packageName}.files", this)
+internal fun String.toDocumentUri(context: Context): Uri {
+    val uri = Uri.parse(this)
+    if (uri.scheme == "content") return uri
+    val file = if (uri.scheme == "file") File(uri.path.orEmpty()) else File(this)
+    return FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+}
 

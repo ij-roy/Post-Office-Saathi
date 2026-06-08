@@ -21,21 +21,30 @@ import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.forms.FormsLoadResult
 import roy.ij.postofficesaathi.data.forms.FormsRepository
 import roy.ij.postofficesaathi.data.forms.GitHubFormsRepository
+import roy.ij.postofficesaathi.data.forms.OfflineFormsException
+import roy.ij.postofficesaathi.data.storage.PublicDocumentRef
 import roy.ij.postofficesaathi.domain.forms.FormItem
 import roy.ij.postofficesaathi.domain.forms.FormSearchEngine
-import java.io.File
 
 data class FormsUiState(
     val loadResult: FormsLoadResult = FormsLoadResult(emptyList(), isFromCache = true),
     val query: String = "",
     val visibleForms: List<FormItem> = emptyList(),
     val isLoading: Boolean = true,
-    val activeMessage: String? = null
+    val activeMessage: String? = null,
+    val activeMessageId: Long = 0L,
+    val activeFormId: String? = null,
+    val activeFormAction: FormActionKind? = null
 )
 
+enum class FormActionKind {
+    Open,
+    Share
+}
+
 sealed interface FormsExternalAction {
-    data class OpenPdf(val file: File, val form: FormItem, val query: String) : FormsExternalAction
-    data class SharePdf(val file: File, val form: FormItem, val query: String) : FormsExternalAction
+    data class OpenPdf(val document: PublicDocumentRef, val form: FormItem, val query: String) : FormsExternalAction
+    data class SharePdf(val document: PublicDocumentRef, val form: FormItem, val query: String) : FormsExternalAction
 }
 
 class FormsViewModel(
@@ -88,38 +97,52 @@ class FormsViewModel(
     }
 
     fun openForm(form: FormItem) {
+        if (_uiState.value.activeFormId != null) return
         viewModelScope.launch {
             val query = _uiState.value.query
+            setActiveAction(form.id, FormActionKind.Open)
             analytics.logButtonTap("form_open_or_download", AnalyticsScreen.Forms)
             analytics.logEvent(AnalyticsEvent.FormDownloadStarted, form.analyticsParams(query))
             runCatching { repository.downloadForm(form) }
-                .onSuccess { file ->
+                .onSuccess { document ->
                     analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, form.analyticsParams(query))
-                    _externalActions.emit(FormsExternalAction.OpenPdf(file, form, query))
+                    markFormDownloaded(form.id)
+                    if (document.newlySaved) {
+                        showMessage("Form saved to Documents/PostOfficeSaathi/Forms.")
+                    }
+                    _externalActions.emit(FormsExternalAction.OpenPdf(document, form, query))
                 }
                 .onFailure { error ->
-                    showMessage("Could not download this form. Please try again.")
+                    showMessage(error.downloadFailureMessage())
                     analytics.logEvent(AnalyticsEvent.FormDownloadFailed, form.analyticsParams(query, error))
                     analytics.recordError("form_download", error, form.analyticsParams(query))
                 }
+            clearActiveAction()
         }
     }
 
     fun shareForm(form: FormItem) {
+        if (_uiState.value.activeFormId != null) return
         viewModelScope.launch {
             val query = _uiState.value.query
+            setActiveAction(form.id, FormActionKind.Share)
             analytics.logButtonTap("form_share", AnalyticsScreen.Forms)
             analytics.logEvent(AnalyticsEvent.FormDownloadStarted, form.analyticsParams(query))
             runCatching { repository.downloadForm(form) }
-                .onSuccess { file ->
+                .onSuccess { document ->
                     analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, form.analyticsParams(query))
-                    _externalActions.emit(FormsExternalAction.SharePdf(file, form, query))
+                    markFormDownloaded(form.id)
+                    if (document.newlySaved) {
+                        showMessage("Form saved to Documents/PostOfficeSaathi/Forms.")
+                    }
+                    _externalActions.emit(FormsExternalAction.SharePdf(document, form, query))
                 }
                 .onFailure { error ->
-                    showMessage("Could not share this form. Please try again.")
+                    showMessage(error.downloadFailureMessage())
                     analytics.logEvent(AnalyticsEvent.FormDownloadFailed, form.analyticsParams(query, error))
                     analytics.recordError("form_download", error, form.analyticsParams(query))
                 }
+            clearActiveAction()
         }
     }
 
@@ -142,7 +165,26 @@ class FormsViewModel(
     }
 
     private fun showMessage(message: String) {
-        _uiState.update { it.copy(activeMessage = message) }
+        _uiState.update { it.copy(activeMessage = message, activeMessageId = it.activeMessageId + 1L) }
+    }
+
+    private fun setActiveAction(formId: String, action: FormActionKind) {
+        _uiState.update { it.copy(activeFormId = formId, activeFormAction = action, activeMessage = null) }
+    }
+
+    private fun clearActiveAction() {
+        _uiState.update { it.copy(activeFormId = null, activeFormAction = null) }
+    }
+
+    private fun markFormDownloaded(formId: String) {
+        _uiState.update { state ->
+            val loadForms = state.loadResult.forms.markDownloaded(formId)
+            val visibleForms = state.visibleForms.markDownloaded(formId)
+            state.copy(
+                loadResult = state.loadResult.copy(forms = loadForms),
+                visibleForms = visibleForms
+            )
+        }
     }
 
     private fun logSearch(query: String, resultCount: Int) {
@@ -172,6 +214,16 @@ class FormsViewModel(
         }
     }
 }
+
+private fun List<FormItem>.markDownloaded(formId: String): List<FormItem> =
+    map { if (it.id == formId) it.copy(isDownloaded = true) else it }
+
+private fun Throwable.downloadFailureMessage(): String =
+    if (this is OfflineFormsException) {
+        "No internet connection. Please try again when you're online."
+    } else {
+        "Could not download this form. Please try again."
+    }
 
 private fun FormItem.analyticsParams(query: String, throwable: Throwable? = null): Map<String, Any?> =
     mapOf(

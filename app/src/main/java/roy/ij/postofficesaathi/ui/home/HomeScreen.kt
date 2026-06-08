@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,14 +41,19 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import roy.ij.postofficesaathi.data.recent.RecentWorkItem
+import roy.ij.postofficesaathi.data.recent.RecentWorkType
 import roy.ij.postofficesaathi.ui.components.PagePadding
 import roy.ij.postofficesaathi.ui.components.SaathiCard
 import roy.ij.postofficesaathi.ui.components.SaathiScreen
 
 @Composable
 fun HomeScreen(
+    state: HomeUiState,
     onOpenForms: () -> Unit,
-    onCreatePdf: () -> Unit
+    onCreatePdf: () -> Unit,
+    onOpenRecent: (RecentWorkItem) -> Unit,
+    onShareRecent: (RecentWorkItem) -> Unit
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -96,14 +102,11 @@ fun HomeScreen(
                         .padding(horizontal = PagePadding)
                         .padding(bottom = 32.dp)
                 ) {
-                    SaathiCard {
-                        Text("Recent Work", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            "Saved forms and created PDFs will appear here once you use the tools.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    RecentWorkPanel(
+                        items = state.recentItems,
+                        onOpen = onOpenRecent,
+                        onShare = onShareRecent
+                    )
                 }
             }
 
@@ -128,6 +131,89 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RecentWorkPanel(
+    items: List<RecentWorkItem>,
+    onOpen: (RecentWorkItem) -> Unit,
+    onShare: (RecentWorkItem) -> Unit
+) {
+    SaathiCard {
+        Text("Recent Work", style = MaterialTheme.typography.titleLarge)
+        if (items.isEmpty()) {
+            Text(
+                "Saved forms and created PDFs will appear here once you use the tools.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items.forEach { item ->
+                    RecentWorkRow(item = item, onOpen = { onOpen(item) }, onShare = { onShare(item) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentWorkRow(
+    item: RecentWorkItem,
+    onOpen: () -> Unit,
+    onShare: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White.copy(alpha = 0.48f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                item.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                when (item.type) {
+                    RecentWorkType.CreatedPdf -> "Created PDF"
+                    RecentWorkType.Form -> "Downloaded form"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                RecentWorkButton("Open", onOpen, Modifier.weight(1f), primary = true)
+                RecentWorkButton("Share", onShare, Modifier.widthIn(min = 104.dp), primary = false)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentWorkButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    primary: Boolean
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 44.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (primary) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.58f),
+        contentColor = if (primary) Color.White else MaterialTheme.colorScheme.primary,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = if (primary) 1f else 0.28f))
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(text, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

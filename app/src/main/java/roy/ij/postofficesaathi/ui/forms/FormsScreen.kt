@@ -3,6 +3,7 @@ package roy.ij.postofficesaathi.ui.forms
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
@@ -31,6 +32,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -52,6 +54,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
+import roy.ij.postofficesaathi.data.storage.PublicDocumentRef
 import roy.ij.postofficesaathi.domain.forms.FormItem
 import roy.ij.postofficesaathi.ui.components.PagePadding
 import roy.ij.postofficesaathi.ui.components.SaathiCard
@@ -72,17 +75,20 @@ fun FormsRoute(
         viewModel.externalActions.collect { action ->
             when (action) {
                 is FormsExternalAction.OpenPdf -> {
-                    runCatching { openPdf(context, action.file) }
+                    runCatching { openPdf(context, action.document) }
                         .onSuccess { viewModel.onFormOpened(action.form, action.query) }
                         .onFailure { viewModel.onExternalActionFailed("form_open", it, action.form, action.query) }
                 }
                 is FormsExternalAction.SharePdf -> {
-                    runCatching { sharePdf(context, action.file) }
+                    runCatching { sharePdf(context, action.document) }
                         .onSuccess { viewModel.onFormShared(action.form, action.query) }
                         .onFailure { viewModel.onExternalActionFailed("form_share", it, action.form, action.query) }
                 }
             }
         }
+    }
+    LaunchedEffect(state.activeMessageId) {
+        state.activeMessage?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
 
     FormsScreen(
@@ -144,6 +150,8 @@ fun FormsScreen(
                         items(state.visibleForms, key = { it.id }) { form ->
                             FormRow(
                                 form = form,
+                                activeAction = if (state.activeFormId == form.id) state.activeFormAction else null,
+                                actionsEnabled = state.activeFormId == null,
                                 onOpen = { onOpen(form) },
                                 onShare = { onShare(form) }
                             )
@@ -235,6 +243,8 @@ private fun EmptyFormsState(query: String) {
 @Composable
 private fun FormRow(
     form: FormItem,
+    activeAction: FormActionKind?,
+    actionsEnabled: Boolean,
     onOpen: () -> Unit,
     onShare: () -> Unit
 ) {
@@ -262,6 +272,9 @@ private fun FormRow(
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
         )
+        AnimatedVisibility(visible = activeAction != null) {
+            activeAction?.let { DownloadProgressPill(it) }
+        }
         Row(
             modifier = Modifier.padding(top = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -270,15 +283,57 @@ private fun FormRow(
                 text = if (form.isDownloaded) "Open" else "Download",
                 onClick = onOpen,
                 modifier = Modifier.weight(1f),
-                primary = true
+                primary = true,
+                enabled = actionsEnabled
             )
             FormActionButton(
                 text = "Share",
                 onClick = onShare,
                 modifier = Modifier.widthIn(min = 112.dp),
-                primary = false
+                primary = false,
+                enabled = actionsEnabled
             )
         }
+        }
+    }
+}
+
+@Composable
+private fun DownloadProgressPill(action: FormActionKind) {
+    val transition = rememberInfiniteTransition(label = "formDownloadProgress")
+    val pulse by transition.animateFloat(
+        initialValue = 0.38f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 760),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "formDownloadPulse"
+    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.09f),
+        contentColor = MaterialTheme.colorScheme.secondary,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = pulse)
+            )
+            Text(
+                text = when (action) {
+                    FormActionKind.Open -> "Downloading form..."
+                    FormActionKind.Share -> "Preparing share..."
+                },
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
@@ -341,14 +396,24 @@ private fun FormActionButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    primary: Boolean
+    primary: Boolean,
+    enabled: Boolean
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.heightIn(min = 52.dp),
         shape = RoundedCornerShape(16.dp),
-        color = if (primary) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.58f),
-        contentColor = if (primary) Color.White else MaterialTheme.colorScheme.primary,
+        color = when {
+            !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)
+            primary -> MaterialTheme.colorScheme.primary
+            else -> Color.White.copy(alpha = 0.58f)
+        },
+        contentColor = when {
+            !enabled -> MaterialTheme.colorScheme.onSurfaceVariant
+            primary -> Color.White
+            else -> MaterialTheme.colorScheme.primary
+        },
         border = BorderStroke(
             1.2.dp,
             if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
@@ -429,8 +494,8 @@ private fun SkeletonBlock(
     )
 }
 
-private fun openPdf(context: Context, file: File) {
-    val uri = file.contentUri(context)
+private fun openPdf(context: Context, document: PublicDocumentRef) {
+    val uri = document.uriString.toDocumentUri(context)
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, "application/pdf")
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -438,8 +503,8 @@ private fun openPdf(context: Context, file: File) {
     context.startActivity(Intent.createChooser(intent, "Open form"))
 }
 
-private fun sharePdf(context: Context, file: File) {
-    val uri = file.contentUri(context)
+private fun sharePdf(context: Context, document: PublicDocumentRef) {
+    val uri = document.uriString.toDocumentUri(context)
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "application/pdf"
         putExtra(Intent.EXTRA_STREAM, uri)
@@ -448,5 +513,9 @@ private fun sharePdf(context: Context, file: File) {
     context.startActivity(Intent.createChooser(intent, "Share form"))
 }
 
-private fun File.contentUri(context: Context): Uri =
-    FileProvider.getUriForFile(context, "${context.packageName}.files", this)
+private fun String.toDocumentUri(context: Context): Uri {
+    val uri = Uri.parse(this)
+    if (uri.scheme == "content") return uri
+    val file = if (uri.scheme == "file") File(uri.path.orEmpty()) else File(this)
+    return FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+}

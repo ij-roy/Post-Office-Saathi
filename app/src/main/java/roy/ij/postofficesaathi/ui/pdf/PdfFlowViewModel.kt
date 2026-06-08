@@ -25,6 +25,7 @@ import roy.ij.postofficesaathi.analytics.AnalyticsScreen
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.pdf.PdfCreationUseCase
 import roy.ij.postofficesaathi.data.pdf.PdfImageProcessor
+import roy.ij.postofficesaathi.data.storage.PublicDocumentRef
 import roy.ij.postofficesaathi.domain.pdf.PdfImagePlacement
 import roy.ij.postofficesaathi.domain.pdf.PdfLayoutType
 import roy.ij.postofficesaathi.domain.pdf.PdfPlacementFactory
@@ -37,6 +38,7 @@ data class PdfFlowUiState(
     val capturedFilePaths: List<String> = emptyList(),
     val placements: List<PdfImagePlacement> = emptyList(),
     val createdPdfPath: String? = null,
+    val createdPdfName: String? = null,
     val customerName: String = "",
     val workingImagePath: String? = null,
     val corners: List<NormalizedCorner> = PdfImageProcessor.defaultCorners(),
@@ -48,7 +50,7 @@ data class PdfFlowUiState(
 }
 
 sealed interface PdfFlowExternalAction {
-    data class PdfCreated(val file: File) : PdfFlowExternalAction
+    data class PdfCreated(val document: PublicDocumentRef) : PdfFlowExternalAction
 }
 
 class PdfFlowViewModel(
@@ -79,6 +81,7 @@ class PdfFlowViewModel(
                 capturedFilePaths = emptyList(),
                 placements = emptyList(),
                 createdPdfPath = null,
+                createdPdfName = null,
                 customerName = "",
                 workingImagePath = null,
                 corners = PdfImageProcessor.defaultCorners(),
@@ -216,13 +219,20 @@ class PdfFlowViewModel(
                         placements = state.placements
                     )
                 }
-            }.onSuccess { file ->
+            }.onSuccess { document ->
                 analytics.logEvent(
                     AnalyticsEvent.PdfCreateSucceeded,
                     pdfParams(state.selectedLayout) + mapOf(AnalyticsParam.ImageCount to state.capturedFilePaths.size)
                 )
-                updateState(_uiState.value.copy(createdPdfPath = file.absolutePath, isProcessing = false, processingMessage = null))
-                _externalActions.emit(PdfFlowExternalAction.PdfCreated(file))
+                updateState(
+                    _uiState.value.copy(
+                        createdPdfPath = document.uriString,
+                        createdPdfName = document.displayName,
+                        isProcessing = false,
+                        processingMessage = null
+                    )
+                )
+                _externalActions.emit(PdfFlowExternalAction.PdfCreated(document))
             }.onFailure { error ->
                 setError("Could not create PDF. Please try again.")
                 analytics.logEvent(AnalyticsEvent.PdfCreateFailed, pdfParams(state.selectedLayout, error))
@@ -249,6 +259,7 @@ class PdfFlowViewModel(
         savedStateHandle[KeyCapturedPaths] = ArrayList(state.capturedFilePaths)
         savedStateHandle[KeyPlacements] = PdfFlowSavedStateCodec.encodePlacements(state.placements)
         savedStateHandle[KeyCreatedPdfPath] = state.createdPdfPath
+        savedStateHandle[KeyCreatedPdfName] = state.createdPdfName
         savedStateHandle[KeyCustomerName] = state.customerName
         savedStateHandle[KeyWorkingImagePath] = state.workingImagePath
     }
@@ -266,6 +277,7 @@ class PdfFlowViewModel(
             capturedFilePaths = capturedPaths,
             placements = placements,
             createdPdfPath = savedStateHandle[KeyCreatedPdfPath],
+            createdPdfName = savedStateHandle[KeyCreatedPdfName],
             customerName = savedStateHandle[KeyCustomerName] ?: "",
             workingImagePath = savedStateHandle[KeyWorkingImagePath]
         )
@@ -290,6 +302,7 @@ class PdfFlowViewModel(
         private const val KeyCapturedPaths = "captured_paths"
         private const val KeyPlacements = "placements"
         private const val KeyCreatedPdfPath = "created_pdf_path"
+        private const val KeyCreatedPdfName = "created_pdf_name"
         private const val KeyCustomerName = "customer_name"
         private const val KeyWorkingImagePath = "working_image_path"
     }

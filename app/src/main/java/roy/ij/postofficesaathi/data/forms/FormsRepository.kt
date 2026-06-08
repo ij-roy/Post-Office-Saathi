@@ -1,7 +1,7 @@
 package roy.ij.postofficesaathi.data.forms
 
 import roy.ij.postofficesaathi.domain.forms.FormItem
-import java.io.File
+import roy.ij.postofficesaathi.data.storage.PublicDocumentRef
 
 data class FormsLoadResult(
     val forms: List<FormItem>,
@@ -11,6 +11,6 @@ data class FormsLoadResult(
 
 interface FormsRepository {
     suspend fun loadForms(): FormsLoadResult
-    suspend fun downloadForm(form: FormItem): File
-    fun localFileFor(form: FormItem): File
+    suspend fun downloadForm(form: FormItem): PublicDocumentRef
+    fun localFileNameFor(form: FormItem): String
 }

@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.gradle.api.tasks.bundling.Zip
 
 plugins {
     alias(libs.plugins.android.application)
@@ -25,8 +26,8 @@ android {
         applicationId = "roy.ij.postofficesaathi"
         minSdk = 23
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.2.0"
+        versionCode = 6
+        versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -108,4 +109,23 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+val packageReleaseNativeDebugSymbols by tasks.registering(Zip::class) {
+    group = "build"
+    description = "Packages release native libraries for Play Console native debug symbols upload."
+    dependsOn("mergeReleaseNativeLibs")
+
+    val nativeLibsDir = layout.buildDirectory.dir(
+        "intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib"
+    )
+    from(nativeLibsDir)
+    archiveFileName.set("native-debug-symbols.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("outputs/native-debug-symbols/release"))
+}
+
+afterEvaluate {
+    tasks.named("bundleRelease") {
+        finalizedBy(packageReleaseNativeDebugSymbols)
+    }
 }
