@@ -391,21 +391,29 @@ private fun CornerLoupe(
     modifier: Modifier = Modifier
 ) {
     val cropSize = 180
+    val displaySize = 132.dp
+    val displaySizePx = with(LocalDensity.current) { displaySize.toPx() }
     val centerX = (sourcePoint.x * bitmap.width).roundToInt().coerceIn(0, bitmap.width - 1)
     val centerY = (sourcePoint.y * bitmap.height).roundToInt().coerceIn(0, bitmap.height - 1)
-    val left = (centerX - cropSize / 2).coerceIn(0, maxOf(0, bitmap.width - cropSize))
-    val top = (centerY - cropSize / 2).coerceIn(0, maxOf(0, bitmap.height - cropSize))
-    val actualWidth = minOf(cropSize, bitmap.width - left)
-    val actualHeight = minOf(cropSize, bitmap.height - top)
-    val loupeBitmap = remember(sourcePoint.x, sourcePoint.y, bitmap) {
-        Bitmap.createBitmap(bitmap, left, top, actualWidth, actualHeight)
+    val layout = remember(sourcePoint.x, sourcePoint.y, bitmap, displaySizePx) {
+        CornerLoupeLayout.calculate(
+            bitmapWidth = bitmap.width,
+            bitmapHeight = bitmap.height,
+            centerX = centerX,
+            centerY = centerY,
+            cropSize = cropSize,
+            displaySize = displaySizePx
+        )
+    }
+    val loupeBitmap = remember(layout, bitmap) {
+        Bitmap.createBitmap(bitmap, layout.left, layout.top, layout.width, layout.height)
     }
     DisposableEffect(loupeBitmap) {
         onDispose { loupeBitmap.recycle() }
     }
 
     Surface(
-        modifier = modifier.size(132.dp),
+        modifier = modifier.size(displaySize),
         shape = RoundedCornerShape(18.dp),
         color = Color.Black.copy(alpha = 0.44f),
         border = BorderStroke(2.dp, Color.White.copy(alpha = 0.72f))
@@ -418,7 +426,10 @@ private fun CornerLoupe(
                 contentScale = ContentScale.Crop
             )
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val center = Offset(size.width / 2f, size.height / 2f)
+                val center = Offset(
+                    x = layout.reticleX.coerceIn(0f, size.width),
+                    y = layout.reticleY.coerceIn(0f, size.height)
+                )
                 drawLine(Color.White, Offset(center.x - 24f, center.y), Offset(center.x + 24f, center.y), 3f)
                 drawLine(Color.White, Offset(center.x, center.y - 24f), Offset(center.x, center.y + 24f), 3f)
                 drawCircle(Color(0xFFB00010), 8f, center, style = Stroke(width = 3f))
