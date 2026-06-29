@@ -1,7 +1,6 @@
 package roy.ij.postofficesaathi.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,22 +20,24 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import roy.ij.postofficesaathi.ui.theme.GlassSurface
 
 @Composable
 fun SaathiPrimaryButton(
@@ -47,27 +48,53 @@ fun SaathiPrimaryButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, label = "primaryButtonScale")
-    val containerColor by animateColorAsState(
-        if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        label = "primaryButtonColor"
-    )
+    val scale by animateFloatAsState(if (pressed && enabled) 0.975f else 1f, label = "primaryButtonScale")
+    val darkScheme = isDarkScheme()
+    val shape = RoundedCornerShape(14.dp)
+    val gradient = if (enabled) {
+        Brush.horizontalGradient(
+            if (darkScheme) {
+                listOf(MaterialTheme.colorScheme.primary, Color(0xFFB2221F))
+            } else {
+                listOf(MaterialTheme.colorScheme.primary, Color(0xFFC91D1D))
+            }
+        )
+    } else {
+        Brush.horizontalGradient(
+            listOf(
+                MaterialTheme.colorScheme.surfaceVariant,
+                MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+    }
 
-    Button(
+    Surface(
         onClick = onClick,
         enabled = enabled,
         interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp)
+            .heightIn(min = 48.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             },
-        shape = RoundedCornerShape(18.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = containerColor)
+        shape = shape,
+        color = Color.Transparent,
+        contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        shadowElevation = if (enabled && darkScheme) 7.dp else 0.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 0.34f else 0.14f))
     ) {
-        Text(text = text, style = MaterialTheme.typography.labelLarge)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(gradient)
+                .padding(horizontal = 18.dp, vertical = 13.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = text, style = MaterialTheme.typography.labelLarge)
+        }
     }
 }
 
@@ -77,17 +104,22 @@ fun SaathiSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
+    Surface(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)),
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color.White.copy(alpha = 0.42f),
-            contentColor = MaterialTheme.colorScheme.primary
-        )
+        modifier = modifier.heightIn(min = 46.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = glassContainerColor(),
+        contentColor = MaterialTheme.colorScheme.primary,
+        shadowElevation = if (isDarkScheme()) 3.dp else 0.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.36f))
     ) {
-        Text(text = text, style = MaterialTheme.typography.labelLarge)
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                modifier = Modifier.padding(horizontal = 15.dp, vertical = 11.dp),
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
     }
 }
 
@@ -97,17 +129,18 @@ fun SaathiCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = CardDefaults.cardColors(containerColor = GlassSurface)
-    val border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+    val colors = CardDefaults.cardColors(containerColor = glassContainerColor())
+    val darkScheme = isDarkScheme()
+    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = if (darkScheme) 0.42f else 0.40f))
     if (onClick == null) {
         Card(
             modifier = modifier.fillMaxWidth(),
             colors = colors,
             border = border,
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(24.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = if (darkScheme) 6.dp else 0.dp),
+            shape = RoundedCornerShape(20.dp)
         ) {
-            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
         }
     } else {
         Card(
@@ -115,10 +148,10 @@ fun SaathiCard(
             modifier = modifier.fillMaxWidth(),
             colors = colors,
             border = border,
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(24.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = if (darkScheme) 6.dp else 0.dp),
+            shape = RoundedCornerShape(20.dp)
         ) {
-            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
         }
     }
 }
@@ -128,12 +161,56 @@ fun SaathiScreen(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val background = if (isDarkScheme()) {
+        Brush.verticalGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.background,
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
+                MaterialTheme.colorScheme.background
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.background,
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
+                MaterialTheme.colorScheme.background
+            )
+        )
+    }
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(background)
     ) {
         content()
+    }
+}
+
+@Composable
+fun SaathiIconButton(
+    imageVector: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.primary
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.size(46.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = glassContainerColor(),
+        contentColor = tint,
+        shadowElevation = if (isDarkScheme()) 4.dp else 0.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.34f))
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(22.dp)
+            )
+        }
     }
 }
 
@@ -145,10 +222,10 @@ fun SaathiChip(
 ) {
     Surface(
         modifier = modifier,
-        color = accent.copy(alpha = 0.12f),
+        color = accent.copy(alpha = if (isDarkScheme()) 0.18f else 0.12f),
         contentColor = accent,
         shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.16f))
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
     ) {
         Text(
             text = text,
@@ -182,11 +259,12 @@ fun ScreenHeader(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             if (showChip) {
-                SaathiChip("Agent utility", accent = MaterialTheme.colorScheme.primary)
+                SaathiChip("Postal utility", accent = MaterialTheme.colorScheme.primary)
             }
             Text(title, style = MaterialTheme.typography.headlineLarge)
             if (subtitle.isNotBlank()) {
@@ -202,3 +280,17 @@ fun ScreenHeader(
 }
 
 val PagePadding = 16.dp
+
+@Composable
+private fun glassContainerColor(): Color {
+    return if (isDarkScheme()) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
+    }
+}
+
+@Composable
+private fun isDarkScheme(): Boolean {
+    return MaterialTheme.colorScheme.background.luminance() < 0.5f
+}

@@ -139,6 +139,7 @@ import roy.ij.postofficesaathi.domain.pdf.PdfPlacementSnapper
 import roy.ij.postofficesaathi.domain.pdf.PdfPlacementSnapper.Guides
 import roy.ij.postofficesaathi.ui.pdf.state.NormalizedCorner
 import roy.ij.postofficesaathi.ui.components.PagePadding
+import roy.ij.postofficesaathi.ui.components.PdfTemplateCardIllustration
 import roy.ij.postofficesaathi.ui.components.SaathiCard
 import roy.ij.postofficesaathi.ui.components.SaathiChip
 import roy.ij.postofficesaathi.ui.components.SaathiPrimaryButton
@@ -178,8 +179,9 @@ fun PdfLayoutSelectionScreen(
                         .fillMaxWidth()
                         .widthIn(max = 560.dp),
                     shape = RoundedCornerShape(24.dp),
-                    color = Color.White.copy(alpha = 0.92f),
-                    border = BorderStroke(1.3.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+                    shadowElevation = 0.dp,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.30f))
                 ) {
                     Column(
                         modifier = Modifier.padding(18.dp),
@@ -244,7 +246,7 @@ private fun BlurredTemplateBackground() {
         Text(
             "Create PDF",
             style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f)
+            color = MaterialTheme.colorScheme.background.copy(alpha = 0.62f)
         )
         repeat(4) {
             Surface(
@@ -252,7 +254,7 @@ private fun BlurredTemplateBackground() {
                     .fillMaxWidth()
                     .height(116.dp),
                 shape = RoundedCornerShape(22.dp),
-                color = Color.White.copy(alpha = 0.44f),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.48f),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
             ) {}
         }
@@ -264,7 +266,7 @@ private fun BlurredTemplateBackground() {
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f)
+            color = MaterialTheme.colorScheme.background.copy(alpha = 0.78f)
         ) {}
     }
 }
@@ -280,9 +282,10 @@ private fun TemplateOptionCard(
         onClick = { onClick(layoutType) },
         modifier = modifier.heightIn(min = 176.dp),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White.copy(alpha = 0.76f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
         contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(1.4.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -303,33 +306,10 @@ private fun TemplateOptionCard(
 
 @Composable
 private fun TemplatePreview(layoutType: PdfLayoutType) {
-    Surface(
+    PdfTemplateCardIllustration(
+        cardCount = layoutType.documentLabels.size,
         modifier = Modifier
             .fillMaxWidth()
-            .height(116.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.055f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.86f))
-    ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            repeat(layoutType.documentLabels.size) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(24.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color.White.copy(alpha = 0.76f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                ) {}
-                if (it != layoutType.documentLabels.lastIndex) {
-                    Box(modifier = Modifier.height(7.dp))
-                }
-            }
-        }
-    }
+            .height(116.dp)
+    )
 }
-

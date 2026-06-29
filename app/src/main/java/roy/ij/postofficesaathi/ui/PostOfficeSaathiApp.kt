@@ -10,6 +10,8 @@ import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -40,6 +42,7 @@ import roy.ij.postofficesaathi.ui.forms.FormsRoute
 import roy.ij.postofficesaathi.ui.home.HomeExternalAction
 import roy.ij.postofficesaathi.ui.home.HomeScreen
 import roy.ij.postofficesaathi.ui.home.HomeViewModel
+import roy.ij.postofficesaathi.ui.onboarding.OnboardingScreen
 import roy.ij.postofficesaathi.ui.pdf.DocumentCaptureScreen
 import roy.ij.postofficesaathi.ui.pdf.PdfFlowViewModel
 import roy.ij.postofficesaathi.ui.pdf.PdfCreatedSuccessScreen
@@ -47,11 +50,21 @@ import roy.ij.postofficesaathi.ui.pdf.PdfLayoutSelectionScreen
 import roy.ij.postofficesaathi.ui.pdf.PdfNameInputScreen
 import roy.ij.postofficesaathi.ui.pdf.PdfPreviewEditorScreen
 import roy.ij.postofficesaathi.ui.pdf.analyticsName
+import roy.ij.postofficesaathi.ui.settings.AppSettingsUiState
+import roy.ij.postofficesaathi.ui.settings.AppSettingsViewModel
+import roy.ij.postofficesaathi.ui.settings.HelpScreen
+import roy.ij.postofficesaathi.ui.settings.PrivacyScreen
+import roy.ij.postofficesaathi.ui.settings.SettingsScreen
 import java.io.File
 
 private object Routes {
+    const val Gate = "gate"
+    const val Onboarding = "onboarding"
     const val Home = "home"
     const val Forms = "forms"
+    const val Settings = "settings"
+    const val Help = "help"
+    const val Privacy = "privacy"
     const val PdfLayout = "pdf-layout"
     const val Capture = "capture"
     const val Preview = "preview"
@@ -59,8 +72,15 @@ private object Routes {
     const val Success = "success"
 }
 
+private const val PlayStoreUrl = "https://play.google.com/store/apps/details?id=roy.ij.postofficesaathi"
+private const val FeedbackEmail = "ijroy037@gmail.com"
+
 @Composable
-fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
+fun PostOfficeSaathiApp(
+    analytics: SaathiAnalytics,
+    settingsState: AppSettingsUiState,
+    settingsViewModel: AppSettingsViewModel
+) {
     val context = LocalContext.current
     val navController = rememberNavController()
     val pdfFlowFactory = remember(context, analytics) { PdfFlowViewModel.Factory(context, analytics) }
@@ -122,9 +142,38 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
     Scaffold { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Routes.Home,
+            startDestination = Routes.Gate,
             modifier = Modifier.padding(paddingValues)
         ) {
+            composable(Routes.Gate) {
+                Box(modifier = Modifier.fillMaxSize())
+                LaunchedEffect(settingsState.isLoading, settingsState.preferences.hasSeenOnboarding) {
+                    if (!settingsState.isLoading) {
+                        navController.navigate(
+                            if (settingsState.preferences.hasSeenOnboarding) Routes.Home else Routes.Onboarding
+                        ) {
+                            popUpTo(Routes.Gate) { inclusive = true }
+                        }
+                    }
+                }
+            }
+            composable(Routes.Onboarding) {
+                TrackScreen(analytics, AnalyticsScreen.Onboarding)
+                OnboardingScreen(
+                    onSkip = {
+                        settingsViewModel.completeOnboarding(skipped = true)
+                        navController.navigate(Routes.Home) {
+                            popUpTo(Routes.Onboarding) { inclusive = true }
+                        }
+                    },
+                    onFinish = {
+                        settingsViewModel.completeOnboarding(skipped = false)
+                        navController.navigate(Routes.Home) {
+                            popUpTo(Routes.Onboarding) { inclusive = true }
+                        }
+                    }
+                )
+            }
             composable(Routes.Home) {
                 TrackScreen(analytics, AnalyticsScreen.Home)
                 HomeScreen(
@@ -143,14 +192,52 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
                             navController.navigate(Routes.PdfLayout)
                         }
                     },
+                    onOpenSettings = {
+                        analytics.logButtonTap("home_settings", AnalyticsScreen.Home)
+                        navController.navigate(Routes.Settings)
+                    },
                     onOpenRecent = homeViewModel::openRecent,
                     onShareRecent = homeViewModel::shareRecent
                 )
+            }
+            composable(Routes.Settings) {
+                TrackScreen(analytics, AnalyticsScreen.Settings)
+                LaunchedEffect(Unit) { settingsViewModel.logSettingsOpened() }
+                SettingsScreen(
+                    state = settingsState,
+                    onBack = { navController.popBackStack() },
+                    onThemeSelected = settingsViewModel::setThemeMode,
+                    onRateApp = {
+                        settingsViewModel.logRateAppTapped()
+                        openPlayStore(context)
+                    },
+                    onFeedback = {
+                        settingsViewModel.logFeedbackEmailTapped()
+                        sendFeedbackEmail(context)
+                    },
+                    onHelp = {
+                        settingsViewModel.logHelpOpened()
+                        navController.navigate(Routes.Help)
+                    },
+                    onPrivacy = {
+                        settingsViewModel.logPrivacyOpened()
+                        navController.navigate(Routes.Privacy)
+                    }
+                )
+            }
+            composable(Routes.Help) {
+                TrackScreen(analytics, AnalyticsScreen.Help)
+                HelpScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.Privacy) {
+                TrackScreen(analytics, AnalyticsScreen.Privacy)
+                PrivacyScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.Forms) {
                 TrackScreen(analytics, AnalyticsScreen.Forms)
                 FormsRoute(
                     analytics = analytics,
+                    onMeaningfulActionCompleted = settingsViewModel::recordMeaningfulAction,
                     onBack = {
                         analytics.logButtonTap("forms_back", AnalyticsScreen.Forms)
                         navController.popBackStack()
@@ -223,7 +310,10 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
                         analytics.logButtonTap("pdf_name_back", AnalyticsScreen.Name)
                         navController.popBackStack()
                     },
-                    onPdfCreated = { navController.navigate(Routes.Success) }
+                    onPdfCreated = {
+                        settingsViewModel.recordMeaningfulAction()
+                        navController.navigate(Routes.Success)
+                    }
                 )
             }
             composable(Routes.Success) {
@@ -246,6 +336,25 @@ fun PostOfficeSaathiApp(analytics: SaathiAnalytics) {
             }
         }
     }
+}
+
+private fun openPlayStore(context: Context) {
+    val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${context.packageName}"))
+    runCatching { context.startActivity(marketIntent) }
+        .onFailure {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PlayStoreUrl)))
+        }
+}
+
+private fun sendFeedbackEmail(context: Context) {
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = Uri.parse("mailto:$FeedbackEmail")
+        putExtra(Intent.EXTRA_SUBJECT, "Post Office Saathi feedback")
+    }
+    runCatching { context.startActivity(Intent.createChooser(intent, "Send feedback")) }
+        .onFailure {
+            Toast.makeText(context, "No email app found.", Toast.LENGTH_SHORT).show()
+        }
 }
 
 private fun openDocument(context: Context, uriString: String) {

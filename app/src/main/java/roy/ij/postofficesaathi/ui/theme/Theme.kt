@@ -11,28 +11,37 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import roy.ij.postofficesaathi.data.preferences.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PostalRedContainer,
-    secondary = PostalBlueContainer,
-    tertiary = PostalBlue,
-    background = PostalText,
-    surface = Color(0xFF3E2C2A),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onBackground = Color(0xFFFFEDEA),
-    onSurface = Color(0xFFFFEDEA)
+    primary = NightRed,
+    secondary = NightBlue,
+    tertiary = NightAmber,
+    background = NightBackground,
+    surface = NightSurface,
+    surfaceVariant = NightSurfaceContainer,
+    primaryContainer = Color(0xFF531415),
+    secondaryContainer = Color(0xFF13385F),
+    tertiaryContainer = Color(0xFF4D3909),
+    onPrimary = Color(0xFF2B0505),
+    onSecondary = Color(0xFF061827),
+    onBackground = NightText,
+    onSurface = NightText,
+    onSurfaceVariant = NightTextVariant,
+    outline = NightOutline,
+    outlineVariant = NightOutlineVariant
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = PostalRed,
-    secondary = PostalBlue,
-    tertiary = PostalBlue,
+    secondary = PostalAmber,
+    tertiary = PostalAmber,
     background = WarmBackground,
     surface = WarmSurface,
     surfaceVariant = WarmSurfaceContainer,
     primaryContainer = PostalRedContainer,
     secondaryContainer = PostalBlueContainer,
+    tertiaryContainer = Color(0xFFFFE7B0),
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
@@ -55,11 +64,16 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun PostOfficeSaathiTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.System,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+    }
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

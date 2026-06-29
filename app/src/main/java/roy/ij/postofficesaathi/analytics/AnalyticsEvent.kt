@@ -27,4 +27,13 @@ object AnalyticsEvent {
     const val PdfCreateFailed = "pdf_create_failed"
     const val PdfOpened = "pdf_opened"
     const val PdfShared = "pdf_shared"
+    const val OnboardingCompleted = "onboarding_completed"
+    const val OnboardingSkipped = "onboarding_skipped"
+    const val SettingsOpened = "settings_opened"
+    const val ThemeChanged = "theme_changed"
+    const val HelpOpened = "help_opened"
+    const val PrivacyOpened = "privacy_opened"
+    const val FeedbackEmailTapped = "feedback_email_tapped"
+    const val RateAppTapped = "rate_app_tapped"
+    const val ReviewPromptRequested = "review_prompt_requested"
 }

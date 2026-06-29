@@ -9,6 +9,10 @@ object AnalyticsScreen {
     const val Preview = "pdf_preview"
     const val Name = "pdf_name"
     const val Success = "pdf_success"
+    const val Onboarding = "onboarding"
+    const val Settings = "settings"
+    const val Help = "help"
+    const val Privacy = "privacy"
 }
 
 object AnalyticsFlow {

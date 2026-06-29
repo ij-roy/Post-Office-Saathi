@@ -19,4 +19,5 @@ object AnalyticsParam {
     const val ImageCount = "image_count"
     const val FromCache = "from_cache"
     const val UsedFallback = "used_fallback"
+    const val ThemeMode = "theme_mode"
 }

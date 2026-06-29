@@ -1,4 +1,4 @@
-package roy.ij.postofficesaathi.ui.pdf
+﻿package roy.ij.postofficesaathi.ui.pdf
 
 import android.Manifest
 import android.content.Context
@@ -66,6 +66,7 @@ import androidx.camera.core.ViewPort
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -106,7 +107,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
@@ -197,9 +197,9 @@ fun PdfNameInputScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
-                    focusedContainerColor = Color.White.copy(alpha = 0.78f),
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.54f)
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.36f),
+                    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.62f)
                 )
             )
             FileNamePreview(customerName = state.customerName, layoutType = state.selectedLayout)
@@ -344,7 +344,7 @@ private fun PdfStackPreview(
                     .fillMaxHeight()
                     .width(58.dp),
                 shape = RoundedCornerShape(10.dp),
-                color = Color.White.copy(alpha = 0.86f),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
             ) {
                 Column(
@@ -446,8 +446,8 @@ private fun PdfSuccessHero(fileName: String?) {
                 .fillMaxWidth()
                 .padding(top = 10.dp),
             shape = RoundedCornerShape(14.dp),
-            color = Color.White.copy(alpha = 0.56f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.62f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.24f))
         ) {
             Column(
                 modifier = Modifier.padding(12.dp),
@@ -546,12 +546,12 @@ private fun PdfBackIconButton(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.size(48.dp),
         shape = CircleShape,
-        color = Color.White.copy(alpha = 0.64f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.62f),
         contentColor = MaterialTheme.colorScheme.primary,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.30f))
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text("‹", style = MaterialTheme.typography.headlineMedium)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go back", modifier = Modifier.size(22.dp))
         }
     }
 }
