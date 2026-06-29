@@ -1,0 +1,1117 @@
+{
+  "version": "2026-04-01",
+  "schemes": [
+    {
+      "schemeType": "SB",
+      "rates": [
+        {
+          "effectiveFrom": "1981-04-01",
+          "effectiveTo": "1998-12-31",
+          "rate": 5.5,
+          "compoundingFrequency": "SIMPLE"
+        },
+        {
+          "effectiveFrom": "1999-01-01",
+          "effectiveTo": "2001-02-28",
+          "rate": 4.5,
+          "compoundingFrequency": "SIMPLE"
+        },
+        {
+          "effectiveFrom": "2001-03-01",
+          "effectiveTo": "2011-11-30",
+          "rate": 3.5,
+          "compoundingFrequency": "SIMPLE"
+        },
+        {
+          "effectiveFrom": "2011-12-01",
+          "effectiveTo": null,
+          "rate": 4.0,
+          "compoundingFrequency": "SIMPLE"
+        }
+      ]
+    },
+    {
+      "schemeType": "RD",
+      "rates": [
+        {
+          "effectiveFrom": "1981-04-01",
+          "effectiveTo": "1982-03-31",
+          "rate": 9.9,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1982-04-01",
+          "effectiveTo": "1983-02-28",
+          "rate": 10.3,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1983-03-01",
+          "effectiveTo": "1987-03-31",
+          "rate": 11.3,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1987-04-01",
+          "effectiveTo": "1991-03-31",
+          "rate": 11.0,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1991-04-01",
+          "effectiveTo": "1991-09-30",
+          "rate": 11.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1991-10-01",
+          "effectiveTo": "1993-09-01",
+          "rate": 13.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1993-09-02",
+          "effectiveTo": "1998-12-31",
+          "rate": 12.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1999-01-01",
+          "effectiveTo": "2000-01-14",
+          "rate": 11.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2000-01-15",
+          "effectiveTo": "2001-02-28",
+          "rate": 10.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2001-03-01",
+          "effectiveTo": "2002-02-28",
+          "rate": 9.0,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2002-03-01",
+          "effectiveTo": "2003-02-28",
+          "rate": 8.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2003-03-01",
+          "effectiveTo": "2011-11-30",
+          "rate": 7.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2011-12-01",
+          "effectiveTo": "2012-03-31",
+          "rate": 8.0,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2012-04-01",
+          "effectiveTo": "2013-03-31",
+          "rate": 8.4,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2013-04-01",
+          "effectiveTo": "2014-03-31",
+          "rate": 8.3,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2014-04-01",
+          "effectiveTo": "2016-03-31",
+          "rate": 8.4,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2016-04-01",
+          "effectiveTo": "2016-09-30",
+          "rate": 7.4,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2016-10-01",
+          "effectiveTo": "2017-03-31",
+          "rate": 7.3,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2017-04-01",
+          "effectiveTo": "2017-06-30",
+          "rate": 7.2,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2017-07-01",
+          "effectiveTo": "2017-12-31",
+          "rate": 7.1,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2018-01-01",
+          "effectiveTo": "2018-09-30",
+          "rate": 6.9,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2018-10-01",
+          "effectiveTo": "2019-06-30",
+          "rate": 7.3,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2019-07-01",
+          "effectiveTo": "2020-03-31",
+          "rate": 7.2,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2020-04-01",
+          "effectiveTo": "2023-03-31",
+          "rate": 5.8,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-04-01",
+          "effectiveTo": "2023-06-30",
+          "rate": 6.2,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-07-01",
+          "effectiveTo": "2023-09-30",
+          "rate": 6.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-10-01",
+          "effectiveTo": null,
+          "rate": 6.7,
+          "compoundingFrequency": "QUARTERLY"
+        }
+      ]
+    },
+    {
+      "schemeType": "TD",
+      "rates": [
+        {
+          "effectiveFrom": "1981-03-02",
+          "effectiveTo": "1982-03-31",
+          "tenureRates": { "1Y": 8.5, "2Y": 9.5, "3Y": 10.5, "5Y": 10.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1982-04-01",
+          "effectiveTo": "1983-02-28",
+          "tenureRates": { "1Y": 9.0, "2Y": 9.75, "3Y": 10.5, "5Y": 10.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1983-03-01",
+          "effectiveTo": "1985-05-09",
+          "tenureRates": { "1Y": 9.0, "2Y": 9.75, "3Y": 10.5, "5Y": 11.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1985-05-10",
+          "effectiveTo": "1987-03-31",
+          "tenureRates": { "1Y": 9.5, "2Y": 10.0, "3Y": 10.5, "5Y": 11.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1987-04-01",
+          "effectiveTo": "1991-03-31",
+          "tenureRates": { "1Y": 9.5, "2Y": 10.0, "3Y": 10.5, "5Y": 11.0 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1991-04-01",
+          "effectiveTo": "1991-09-30",
+          "tenureRates": { "1Y": 9.5, "2Y": 10.0, "3Y": 11.0, "5Y": 11.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1991-10-01",
+          "effectiveTo": "1991-12-15",
+          "tenureRates": { "1Y": 10.0, "2Y": 11.0, "3Y": 13.0, "5Y": 13.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1991-12-16",
+          "effectiveTo": "1993-09-01",
+          "tenureRates": { "1Y": 12.0, "2Y": 12.0, "3Y": 13.0, "5Y": 13.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1993-09-02",
+          "effectiveTo": "1998-12-31",
+          "tenureRates": { "1Y": 10.5, "2Y": 11.0, "3Y": 12.0, "5Y": 12.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "1999-01-01",
+          "effectiveTo": "2000-01-14",
+          "tenureRates": { "1Y": 9.0, "2Y": 10.0, "3Y": 11.0, "5Y": 11.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2000-01-15",
+          "effectiveTo": "2001-02-28",
+          "tenureRates": { "1Y": 8.0, "2Y": 9.0, "3Y": 10.0, "5Y": 10.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2001-03-01",
+          "effectiveTo": "2002-02-28",
+          "tenureRates": { "1Y": 7.5, "2Y": 8.0, "3Y": 9.0, "5Y": 9.0 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2002-03-01",
+          "effectiveTo": "2003-02-28",
+          "tenureRates": { "1Y": 7.25, "2Y": 7.5, "3Y": 8.25, "5Y": 8.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2003-03-01",
+          "effectiveTo": "2011-11-30",
+          "tenureRates": { "1Y": 6.25, "2Y": 6.5, "3Y": 7.25, "5Y": 7.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2011-12-01",
+          "effectiveTo": "2012-03-31",
+          "tenureRates": { "1Y": 7.7, "2Y": 7.8, "3Y": 8.0, "5Y": 8.3 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2012-04-01",
+          "effectiveTo": "2013-03-31",
+          "tenureRates": { "1Y": 8.2, "2Y": 8.3, "3Y": 8.4, "5Y": 8.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2013-04-01",
+          "effectiveTo": "2014-03-31",
+          "tenureRates": { "1Y": 8.2, "2Y": 8.2, "3Y": 8.3, "5Y": 8.4 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2014-04-01",
+          "effectiveTo": "2016-03-31",
+          "tenureRates": { "1Y": 8.4, "2Y": 8.4, "3Y": 8.4, "5Y": 8.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2016-04-01",
+          "effectiveTo": "2016-09-30",
+          "tenureRates": { "1Y": 7.1, "2Y": 7.2, "3Y": 7.4, "5Y": 7.9 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2016-10-01",
+          "effectiveTo": "2017-03-31",
+          "tenureRates": { "1Y": 6.9, "2Y": 7.1, "3Y": 7.3, "5Y": 7.8 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2017-04-01",
+          "effectiveTo": "2017-06-30",
+          "tenureRates": { "1Y": 6.9, "2Y": 7.0, "3Y": 7.2, "5Y": 7.7 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2017-07-01",
+          "effectiveTo": "2017-12-31",
+          "tenureRates": { "1Y": 6.8, "2Y": 6.9, "3Y": 7.1, "5Y": 7.6 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2018-01-01",
+          "effectiveTo": "2018-09-30",
+          "tenureRates": { "1Y": 6.6, "2Y": 6.7, "3Y": 6.9, "5Y": 7.4 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2018-10-01",
+          "effectiveTo": "2018-12-31",
+          "tenureRates": { "1Y": 6.9, "2Y": 7.0, "3Y": 7.2, "5Y": 7.8 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2019-01-01",
+          "effectiveTo": "2019-06-30",
+          "tenureRates": { "1Y": 7.0, "2Y": 7.0, "3Y": 7.0, "5Y": 7.8 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2019-07-01",
+          "effectiveTo": "2020-03-31",
+          "tenureRates": { "1Y": 6.9, "2Y": 6.9, "3Y": 7.1, "5Y": 7.7 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2020-04-01",
+          "effectiveTo": "2022-06-30",
+          "tenureRates": { "1Y": 5.5, "2Y": 5.5, "3Y": 5.5, "5Y": 6.7 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2022-07-01",
+          "effectiveTo": "2022-09-30",
+          "tenureRates": { "1Y": 5.5, "2Y": 5.5, "3Y": 5.5, "5Y": 6.7 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2022-10-01",
+          "effectiveTo": "2022-12-31",
+          "tenureRates": { "1Y": 5.5, "2Y": 5.7, "3Y": 5.8, "5Y": 6.7 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-01-01",
+          "effectiveTo": "2023-03-31",
+          "tenureRates": { "1Y": 6.6, "2Y": 6.8, "3Y": 6.9, "5Y": 7.0 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-04-01",
+          "effectiveTo": "2023-06-30",
+          "tenureRates": { "1Y": 6.8, "2Y": 6.9, "3Y": 7.0, "5Y": 7.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-07-01",
+          "effectiveTo": "2023-09-30",
+          "tenureRates": { "1Y": 6.9, "2Y": 7.0, "3Y": 7.0, "5Y": 7.5 },
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-10-01",
+          "effectiveTo": null,
+          "tenureRates": { "1Y": 6.9, "2Y": 7.0, "3Y": 7.1, "5Y": 7.5 },
+          "compoundingFrequency": "QUARTERLY"
+        }
+      ]
+    },
+    {
+      "schemeType": "MIS",
+      "rates": [
+        {
+          "effectiveFrom": "1987-08-15",
+          "effectiveTo": "1992-04-23",
+          "rate": 12.0,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "1992-04-24",
+          "effectiveTo": "1993-09-01",
+          "rate": 14.0,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "1993-09-02",
+          "effectiveTo": "1998-12-31",
+          "rate": 13.0,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "1999-01-01",
+          "effectiveTo": "2000-01-14",
+          "rate": 12.0,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2000-01-15",
+          "effectiveTo": "2001-02-28",
+          "rate": 11.0,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2001-03-01",
+          "effectiveTo": "2002-02-28",
+          "rate": 9.5,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2002-03-01",
+          "effectiveTo": "2003-02-28",
+          "rate": 9.0,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2003-03-01",
+          "effectiveTo": "2011-11-30",
+          "rate": 8.0,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2011-12-01",
+          "effectiveTo": "2012-03-31",
+          "rate": 8.2,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2012-04-01",
+          "effectiveTo": "2013-03-31",
+          "rate": 8.5,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2013-04-01",
+          "effectiveTo": "2016-03-31",
+          "rate": 8.4,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2016-04-01",
+          "effectiveTo": "2016-09-30",
+          "rate": 7.8,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2016-10-01",
+          "effectiveTo": "2017-03-31",
+          "rate": 7.7,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2017-04-01",
+          "effectiveTo": "2017-06-30",
+          "rate": 7.6,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2017-07-01",
+          "effectiveTo": "2017-12-31",
+          "rate": 7.5,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2018-01-01",
+          "effectiveTo": "2018-09-30",
+          "rate": 7.3,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2018-10-01",
+          "effectiveTo": "2019-06-30",
+          "rate": 7.3,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2019-07-01",
+          "effectiveTo": "2020-03-31",
+          "rate": 7.6,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2020-04-01",
+          "effectiveTo": "2022-09-30",
+          "rate": 6.6,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2022-10-01",
+          "effectiveTo": "2022-12-31",
+          "rate": 6.7,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2023-01-01",
+          "effectiveTo": "2023-03-31",
+          "rate": 7.1,
+          "compoundingFrequency": "MONTHLY"
+        },
+        {
+          "effectiveFrom": "2023-04-01",
+          "effectiveTo": null,
+          "rate": 7.4,
+          "compoundingFrequency": "MONTHLY"
+        }
+      ]
+    },
+    {
+      "schemeType": "NSC",
+      "rates": [
+        {
+          "effectiveFrom": "1989-05-08",
+          "effectiveTo": "1998-12-31",
+          "rate": 12.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1999-01-01",
+          "effectiveTo": "2000-01-14",
+          "rate": 11.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2000-01-15",
+          "effectiveTo": "2001-02-28",
+          "rate": 11.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2001-03-01",
+          "effectiveTo": "2002-02-28",
+          "rate": 9.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2002-03-01",
+          "effectiveTo": "2003-02-28",
+          "rate": 9.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2003-03-01",
+          "effectiveTo": "2011-11-30",
+          "rate": 8.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2011-12-01",
+          "effectiveTo": "2012-03-31",
+          "rate": 8.6,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2012-04-01",
+          "effectiveTo": "2013-03-31",
+          "rate": 8.8,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2013-04-01",
+          "effectiveTo": "2016-03-31",
+          "rate": 8.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2016-04-01",
+          "effectiveTo": "2016-09-30",
+          "rate": 8.1,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2016-10-01",
+          "effectiveTo": "2017-03-31",
+          "rate": 8.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2017-04-01",
+          "effectiveTo": "2017-06-30",
+          "rate": 7.9,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2017-07-01",
+          "effectiveTo": "2017-12-31",
+          "rate": 7.8,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2018-01-01",
+          "effectiveTo": "2018-09-30",
+          "rate": 7.6,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2018-10-01",
+          "effectiveTo": "2019-06-30",
+          "rate": 8.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2019-07-01",
+          "effectiveTo": "2020-03-31",
+          "rate": 7.9,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2020-04-01",
+          "effectiveTo": "2022-12-31",
+          "rate": 6.8,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2023-01-01",
+          "effectiveTo": "2023-03-31",
+          "rate": 7.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2023-04-01",
+          "effectiveTo": null,
+          "rate": 7.7,
+          "compoundingFrequency": "ANNUAL"
+        }
+      ]
+    },
+    {
+      "schemeType": "KVP",
+      "rates": [
+        {
+          "effectiveFrom": "1988-03-23",
+          "effectiveTo": "1998-12-31",
+          "rate": 13.07,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1999-01-01",
+          "effectiveTo": "2000-01-14",
+          "rate": 11.91,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2000-01-15",
+          "effectiveTo": "2001-02-28",
+          "rate": 10.98,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2001-03-01",
+          "effectiveTo": "2002-02-28",
+          "rate": 9.76,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2002-03-01",
+          "effectiveTo": "2003-02-28",
+          "rate": 9.25,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2003-03-01",
+          "effectiveTo": "2011-11-30",
+          "rate": 8.41,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2014-09-23",
+          "effectiveTo": "2016-03-31",
+          "rate": 8.7,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2016-04-01",
+          "effectiveTo": "2016-09-30",
+          "rate": 7.8,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2016-10-01",
+          "effectiveTo": "2017-03-31",
+          "rate": 7.7,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2017-04-01",
+          "effectiveTo": "2017-06-30",
+          "rate": 7.6,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2017-07-01",
+          "effectiveTo": "2017-12-31",
+          "rate": 7.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2018-01-01",
+          "effectiveTo": "2018-09-30",
+          "rate": 7.3,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2018-10-01",
+          "effectiveTo": "2019-06-30",
+          "rate": 7.7,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2019-07-01",
+          "effectiveTo": "2020-03-31",
+          "rate": 7.6,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2020-04-01",
+          "effectiveTo": "2022-09-30",
+          "rate": 6.9,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2022-10-01",
+          "effectiveTo": "2022-12-31",
+          "rate": 7.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2023-01-01",
+          "effectiveTo": "2023-03-31",
+          "rate": 7.2,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2023-04-01",
+          "effectiveTo": null,
+          "rate": 7.5,
+          "compoundingFrequency": "ANNUAL"
+        }
+      ]
+    },
+    {
+      "schemeType": "PPF",
+      "rates": [
+        {
+          "effectiveFrom": "1968-04-01",
+          "effectiveTo": "1970-03-31",
+          "rate": 4.8,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1970-04-01",
+          "effectiveTo": "1973-03-31",
+          "rate": 5.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1973-04-01",
+          "effectiveTo": "1974-03-31",
+          "rate": 5.3,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1974-04-01",
+          "effectiveTo": "1974-07-31",
+          "rate": 5.8,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1974-08-01",
+          "effectiveTo": "1977-03-31",
+          "rate": 7.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1977-04-01",
+          "effectiveTo": "1980-03-31",
+          "rate": 7.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1980-04-01",
+          "effectiveTo": "1981-03-31",
+          "rate": 8.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1981-04-01",
+          "effectiveTo": "1983-03-31",
+          "rate": 8.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1983-04-01",
+          "effectiveTo": "1984-03-31",
+          "rate": 9.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1984-04-01",
+          "effectiveTo": "1985-03-31",
+          "rate": 9.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1985-04-01",
+          "effectiveTo": "1986-03-31",
+          "rate": 10.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "1986-04-01",
+          "effectiveTo": "2000-01-14",
+          "rate": 12.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2000-01-15",
+          "effectiveTo": "2001-02-28",
+          "rate": 11.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2001-03-01",
+          "effectiveTo": "2002-02-28",
+          "rate": 9.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2002-03-01",
+          "effectiveTo": "2003-02-28",
+          "rate": 9.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2003-03-01",
+          "effectiveTo": "2011-11-30",
+          "rate": 8.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2011-12-01",
+          "effectiveTo": "2012-03-31",
+          "rate": 8.6,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2012-04-01",
+          "effectiveTo": "2013-03-31",
+          "rate": 8.8,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2013-04-01",
+          "effectiveTo": "2016-03-31",
+          "rate": 8.7,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2016-04-01",
+          "effectiveTo": "2016-09-30",
+          "rate": 8.1,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2016-10-01",
+          "effectiveTo": "2017-03-31",
+          "rate": 8.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2017-04-01",
+          "effectiveTo": "2017-06-30",
+          "rate": 7.9,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2017-07-01",
+          "effectiveTo": "2017-12-31",
+          "rate": 7.8,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2018-01-01",
+          "effectiveTo": "2018-09-30",
+          "rate": 7.6,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2018-10-01",
+          "effectiveTo": "2019-06-30",
+          "rate": 8.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2019-07-01",
+          "effectiveTo": "2020-03-31",
+          "rate": 7.9,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2020-04-01",
+          "effectiveTo": null,
+          "rate": 7.1,
+          "compoundingFrequency": "ANNUAL"
+        }
+      ]
+    },
+    {
+      "schemeType": "SCSS",
+      "rates": [
+        {
+          "effectiveFrom": "2004-08-02",
+          "effectiveTo": "2012-03-31",
+          "rate": 9.0,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2012-04-01",
+          "effectiveTo": "2013-03-31",
+          "rate": 9.3,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2013-04-01",
+          "effectiveTo": "2015-03-31",
+          "rate": 9.2,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2015-04-01",
+          "effectiveTo": "2016-03-31",
+          "rate": 9.3,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2016-04-01",
+          "effectiveTo": "2016-09-30",
+          "rate": 8.6,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2016-10-01",
+          "effectiveTo": "2017-03-31",
+          "rate": 8.5,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2017-04-01",
+          "effectiveTo": "2017-06-30",
+          "rate": 8.4,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2017-07-01",
+          "effectiveTo": "2018-09-30",
+          "rate": 8.3,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2018-10-01",
+          "effectiveTo": "2019-06-30",
+          "rate": 8.7,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2019-07-01",
+          "effectiveTo": "2020-03-31",
+          "rate": 8.6,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2020-04-01",
+          "effectiveTo": "2022-09-30",
+          "rate": 7.4,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2022-10-01",
+          "effectiveTo": "2022-12-31",
+          "rate": 7.6,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-01-01",
+          "effectiveTo": "2023-03-31",
+          "rate": 8.0,
+          "compoundingFrequency": "QUARTERLY"
+        },
+        {
+          "effectiveFrom": "2023-04-01",
+          "effectiveTo": null,
+          "rate": 8.2,
+          "compoundingFrequency": "QUARTERLY"
+        }
+      ]
+    },
+    {
+      "schemeType": "SSY",
+      "rates": [
+        {
+          "effectiveFrom": "2014-12-03",
+          "effectiveTo": "2015-03-31",
+          "rate": 9.1,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2015-04-01",
+          "effectiveTo": "2016-03-31",
+          "rate": 9.2,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2016-04-01",
+          "effectiveTo": "2016-09-30",
+          "rate": 8.6,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2016-10-01",
+          "effectiveTo": "2017-03-31",
+          "rate": 8.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2017-04-01",
+          "effectiveTo": "2017-06-30",
+          "rate": 8.4,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2017-07-01",
+          "effectiveTo": "2017-12-31",
+          "rate": 8.3,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2018-01-01",
+          "effectiveTo": "2018-09-30",
+          "rate": 8.1,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2018-10-01",
+          "effectiveTo": "2019-06-30",
+          "rate": 8.5,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2019-07-01",
+          "effectiveTo": "2020-03-31",
+          "rate": 8.4,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2020-04-01",
+          "effectiveTo": "2023-03-31",
+          "rate": 7.6,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2023-04-01",
+          "effectiveTo": "2023-12-31",
+          "rate": 8.0,
+          "compoundingFrequency": "ANNUAL"
+        },
+        {
+          "effectiveFrom": "2024-01-01",
+          "effectiveTo": null,
+          "rate": 8.2,
+          "compoundingFrequency": "ANNUAL"
+        }
+      ]
+    },
+    {
+      "schemeType": "MSSC",
+      "rates": [
+        {
+          "effectiveFrom": "2023-04-01",
+          "effectiveTo": null,
+          "rate": 7.5,
+          "compoundingFrequency": "QUARTERLY"
+        }
+      ]
+    }
+  ]
+}
