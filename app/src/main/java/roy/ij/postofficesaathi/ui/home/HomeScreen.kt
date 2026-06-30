@@ -19,7 +19,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -36,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import roy.ij.postofficesaathi.data.recent.RecentWorkItem
 import roy.ij.postofficesaathi.data.recent.RecentWorkType
 import roy.ij.postofficesaathi.ui.components.HomeFormsIllustration
+import roy.ij.postofficesaathi.ui.components.HomeCalculatorIllustration
 import roy.ij.postofficesaathi.ui.components.HomePdfIllustration
 import roy.ij.postofficesaathi.ui.components.PagePadding
 import roy.ij.postofficesaathi.ui.components.SaathiCard
@@ -47,6 +50,8 @@ fun HomeScreen(
     state: HomeUiState,
     onOpenForms: () -> Unit,
     onCreatePdf: () -> Unit,
+    onOpenCalculator: () -> Unit,
+    onSuggestPlans: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenRecent: (RecentWorkItem) -> Unit,
     onShareRecent: (RecentWorkItem) -> Unit
@@ -89,13 +94,19 @@ fun HomeScreen(
                             onClick = onCreatePdf
                         )
                     }
+                    HomeActionCard(
+                        title = "Interest Calculator",
+                        visual = HomeVisual.Calculator,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onOpenCalculator
+                    )
                 }
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = PagePadding)
-                        .padding(bottom = 32.dp)
+                        .padding(bottom = 112.dp)
                 ) {
                     RecentWorkPanel(
                         items = state.recentItems,
@@ -133,6 +144,16 @@ fun HomeScreen(
                     )
                 }
             }
+            ExtendedFloatingActionButton(
+                onClick = onSuggestPlans,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp),
+                icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
+                text = { Text("Suggest Plans") },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         }
     }
 }
@@ -256,6 +277,7 @@ private fun HomeActionCard(
                 when (visual) {
                     HomeVisual.Forms -> HomeFormsIllustration(Modifier.fillMaxSize())
                     HomeVisual.Pdf -> HomePdfIllustration(Modifier.fillMaxSize())
+                    HomeVisual.Calculator -> HomeCalculatorIllustration(Modifier.fillMaxSize())
                 }
             }
             Text(
@@ -272,5 +294,6 @@ private fun HomeActionCard(
 
 private enum class HomeVisual {
     Forms,
-    Pdf
+    Pdf,
+    Calculator
 }

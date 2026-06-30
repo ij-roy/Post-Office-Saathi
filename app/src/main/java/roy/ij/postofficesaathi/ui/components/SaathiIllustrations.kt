@@ -148,6 +148,84 @@ fun OnboardingFormsIllustration(modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+fun HomeCalculatorIllustration(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "homeCalculator")
+    val coinLift by transition.animateFloat(
+        initialValue = -5f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "homeCalculatorCoinLift"
+    )
+    val linePulse by transition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "homeCalculatorLinePulse"
+    )
+
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+    val surface = MaterialTheme.colorScheme.surface
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val outline = MaterialTheme.colorScheme.outline
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val cx = w / 2f
+        val cy = h / 2f
+        val ledgerW = w * 0.58f
+        val ledgerH = h * 0.56f
+        val ledgerX = cx - ledgerW / 2f
+        val ledgerY = cy - ledgerH / 2f + 6f
+
+        drawRoundRect(
+            color = surface.copy(alpha = 0.92f),
+            topLeft = Offset(ledgerX, ledgerY),
+            size = Size(ledgerW, ledgerH),
+            cornerRadius = CornerRadius(12f)
+        )
+        drawRoundRect(
+            color = outline.copy(alpha = 0.24f),
+            topLeft = Offset(ledgerX, ledgerY),
+            size = Size(ledgerW, ledgerH),
+            cornerRadius = CornerRadius(12f),
+            style = Stroke(width = 1.5f)
+        )
+        drawRoundRect(
+            color = primaryContainer.copy(alpha = 0.40f),
+            topLeft = Offset(ledgerX + 10f, ledgerY + 10f),
+            size = Size(ledgerW - 20f, ledgerH * 0.20f),
+            cornerRadius = CornerRadius(8f)
+        )
+        repeat(3) { index ->
+            val lineY = ledgerY + ledgerH * (0.42f + index * 0.18f)
+            drawLine(
+                color = onSurface.copy(alpha = (0.12f + index * 0.04f) * linePulse),
+                start = Offset(ledgerX + ledgerW * 0.16f, lineY),
+                end = Offset(ledgerX + ledgerW * (0.82f - index * 0.08f), lineY),
+                strokeWidth = 3f,
+                cap = StrokeCap.Round
+            )
+        }
+        repeat(3) { index ->
+            val coinR = w * (0.055f + index * 0.004f)
+            val coinCx = cx - w * 0.18f + index * w * 0.18f
+            val coinCy = cy - h * 0.22f + coinLift * (index + 1) * 0.25f
+            drawCircle(secondary.copy(alpha = 0.16f), radius = coinR, center = Offset(coinCx, coinCy))
+            drawCircle(secondary.copy(alpha = 0.44f), radius = coinR, center = Offset(coinCx, coinCy), style = Stroke(width = 2f))
+        }
+        val percentX = cx + w * 0.18f
+        val percentY = cy + h * 0.20f
+        drawCircle(primary.copy(alpha = 0.16f), radius = w * 0.10f, center = Offset(percentX, percentY))
+        drawLine(primary.copy(alpha = 0.60f), Offset(percentX - 13f, percentY + 13f), Offset(percentX + 13f, percentY - 13f), strokeWidth = 3.2f, cap = StrokeCap.Round)
+        drawCircle(primary.copy(alpha = 0.55f), radius = 4f, center = Offset(percentX - 9f, percentY - 9f))
+        drawCircle(primary.copy(alpha = 0.55f), radius = 4f, center = Offset(percentX + 9f, percentY + 9f))
+    }
+}
+
 /**
  * Onboarding page 2 — "Create PDFs"
  * A camera viewfinder framing a document, with corner marks and a PDF badge.

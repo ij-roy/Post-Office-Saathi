@@ -94,6 +94,8 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.play.review.ktx)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.coil.compose)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
