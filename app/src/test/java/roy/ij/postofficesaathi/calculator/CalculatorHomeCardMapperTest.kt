@@ -30,7 +30,18 @@ class CalculatorHomeCardMapperTest {
 
         assertEquals("RD", card.title)
         assertEquals("Recurring Deposit", card.description)
-        assertEquals("6.7% p.a.", card.rateLabel)
+        assertEquals("6.7%", card.rateLabel)
         assertFalse(card.isDiscontinued)
+    }
+
+    @Test
+    fun `custom card does not show a rate line`() {
+        val history = RateHistory(version = "test", rates = emptyList())
+
+        val card = CalculatorHomeCardMapper.cardFor(SchemeType.SIMPLE_INTEREST, history)
+
+        assertEquals("Custom", card.title)
+        assertEquals("Simple or compound interest", card.description)
+        assertEquals("", card.rateLabel)
     }
 }

@@ -12,21 +12,36 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.Elderly
+import androidx.compose.material.icons.filled.HourglassTop
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Woman
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,7 +59,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.domain.calculator.SchemeType
 import roy.ij.postofficesaathi.ui.components.PagePadding
-import roy.ij.postofficesaathi.ui.components.SaathiChip
 import roy.ij.postofficesaathi.ui.components.SaathiIconButton
 import roy.ij.postofficesaathi.ui.components.SaathiScreen
 
@@ -95,7 +110,7 @@ fun CalculatorHomeScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 96.dp)
                     ) {
                         items(state.cards, key = { it.schemeType.name }) { card ->
@@ -146,18 +161,37 @@ private fun SchemeCard(card: CalculatorSchemeCardUi, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.34f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.30f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp, pressedElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f),
+                contentColor = MaterialTheme.colorScheme.primary,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = card.schemeIcon(),
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -165,33 +199,69 @@ private fun SchemeCard(card: CalculatorSchemeCardUi, onClick: () -> Unit) {
                 ) {
                     Text(
                         card.title,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = 2,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (card.isDiscontinued || card.rateLabel.isNotBlank()) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                     if (card.isDiscontinued) {
-                        SaathiChip("Discontinued", accent = MaterialTheme.colorScheme.error)
+                        Text(
+                            "Discontinued",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                            maxLines = 1
+                        )
+                    }
+                    if (card.isDiscontinued && card.rateLabel.isNotBlank()) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                    if (card.rateLabel.isNotBlank()) {
+                        Text(
+                            card.rateLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
                 Text(
                     card.description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    card.rateLabel,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            Icon(
+                imageVector = Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
+
+private fun CalculatorSchemeCardUi.schemeIcon(): ImageVector =
+    when (schemeType) {
+        SchemeType.RD -> Icons.Filled.Autorenew
+        SchemeType.TD -> Icons.Filled.HourglassTop
+        SchemeType.MIS -> Icons.Filled.Payments
+        SchemeType.NSC -> Icons.Filled.Verified
+        SchemeType.KVP -> Icons.Filled.Eco
+        SchemeType.PPF -> Icons.Filled.Savings
+        SchemeType.SSY -> Icons.Filled.ChildCare
+        SchemeType.SCSS -> Icons.Filled.Elderly
+        SchemeType.SB -> Icons.Filled.AccountBalance
+        SchemeType.SIMPLE_INTEREST,
+        SchemeType.COMPOUND_INTEREST -> Icons.Filled.Tune
+        SchemeType.MSSC -> Icons.Filled.Woman
+        SchemeType.RD_REBATE,
+        SchemeType.PMI -> Icons.Filled.Tune
+    }
 
 @Composable
 private fun CalculatorSkeletonList() {
@@ -202,13 +272,13 @@ private fun CalculatorSkeletonList() {
         animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
         label = "calculatorSkeletonAlpha"
     )
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        repeat(4) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        repeat(6) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(92.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.10f))
             )
         }

@@ -42,7 +42,7 @@ object CalculatorHomeCardMapper {
                 schemeType = scheme,
                 title = "Custom",
                 description = "Simple or compound interest",
-                rateLabel = "Use your own rate"
+                rateLabel = ""
             )
         }
 
@@ -56,7 +56,7 @@ object CalculatorHomeCardMapper {
             schemeType = scheme,
             title = scheme.shortName,
             description = scheme.displayName,
-            rateLabel = "${lookup.ratePercent}% p.a.",
+            rateLabel = "${lookup.ratePercent}%",
             isDiscontinued = scheme == SchemeType.MSSC
         )
     }
