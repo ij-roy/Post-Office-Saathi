@@ -15,7 +15,7 @@ import roy.ij.postofficesaathi.analytics.AnalyticsParam
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.calculator.GitHubRatesRepository
 import roy.ij.postofficesaathi.data.calculator.RatesRepository
-import roy.ij.postofficesaathi.domain.calculator.CompoundingFrequency
+import roy.ij.postofficesaathi.domain.calculator.RateHistory
 import roy.ij.postofficesaathi.domain.calculator.SchemeRateResolver
 import roy.ij.postofficesaathi.domain.calculator.SchemeType
 import roy.ij.postofficesaathi.domain.calculator.TDTenure
@@ -30,11 +30,37 @@ data class CalculatorHomeUiState(
 data class CalculatorSchemeCardUi(
     val schemeType: SchemeType,
     val title: String,
-    val subtitle: String,
+    val description: String,
     val rateLabel: String,
-    val compoundingLabel: String,
     val isDiscontinued: Boolean = false
 )
+
+object CalculatorHomeCardMapper {
+    fun cardFor(scheme: SchemeType, history: RateHistory): CalculatorSchemeCardUi {
+        if (scheme == SchemeType.SIMPLE_INTEREST) {
+            return CalculatorSchemeCardUi(
+                schemeType = scheme,
+                title = "Custom",
+                description = "Simple or compound interest",
+                rateLabel = "Use your own rate"
+            )
+        }
+
+        val lookup = SchemeRateResolver.resolve(
+            history = history,
+            schemeType = scheme,
+            date = LocalDate.now(),
+            tdTenure = TDTenure.FiveYears
+        )
+        return CalculatorSchemeCardUi(
+            schemeType = scheme,
+            title = scheme.shortName,
+            description = scheme.displayName,
+            rateLabel = "${lookup.ratePercent}% p.a.",
+            isDiscontinued = scheme == SchemeType.MSSC
+        )
+    }
+}
 
 class CalculatorHomeViewModel(
     private val ratesRepository: RatesRepository,
@@ -51,32 +77,7 @@ class CalculatorHomeViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val result = ratesRepository.loadRates()
-            val cards = HomeSchemes.map { scheme ->
-                if (scheme == SchemeType.SIMPLE_INTEREST) {
-                    CalculatorSchemeCardUi(
-                        schemeType = scheme,
-                        title = "Custom Calculator",
-                        subtitle = "Simple or compound interest",
-                        rateLabel = "Your rate",
-                        compoundingLabel = "Flexible"
-                    )
-                } else {
-                    val lookup = SchemeRateResolver.resolve(
-                        history = result.history,
-                        schemeType = scheme,
-                        date = LocalDate.now(),
-                        tdTenure = TDTenure.FiveYears
-                    )
-                    CalculatorSchemeCardUi(
-                        schemeType = scheme,
-                        title = scheme.displayName,
-                        subtitle = scheme.shortName,
-                        rateLabel = "${lookup.ratePercent}% p.a.",
-                        compoundingLabel = lookup.compoundingFrequency.toDisplayLabel(),
-                        isDiscontinued = scheme == SchemeType.MSSC
-                    )
-                }
-            }
+            val cards = HomeSchemes.map { scheme -> CalculatorHomeCardMapper.cardFor(scheme, result.history) }
             val pendingToast = ratesRepository.pendingRateUpdateToast()
             if (pendingToast != null) ratesRepository.clearPendingRateUpdateToast()
             analytics.logEvent(AnalyticsEvent.CalculatorOpened)
@@ -121,13 +122,3 @@ val HomeSchemes = listOf(
     SchemeType.SIMPLE_INTEREST,
     SchemeType.MSSC
 )
-
-private fun CompoundingFrequency.toDisplayLabel(): String =
-    when (this) {
-        CompoundingFrequency.SIMPLE -> "Simple interest"
-        CompoundingFrequency.MONTHLY -> "Monthly payout"
-        CompoundingFrequency.QUARTERLY -> "Quarterly compounding"
-        CompoundingFrequency.ANNUAL -> "Annual compounding"
-        CompoundingFrequency.AT_MATURITY -> "At maturity"
-    }
-
