@@ -7,14 +7,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -24,7 +27,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -60,6 +62,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -367,7 +370,8 @@ private fun TdTenureSelector(selected: TDTenure, onSelected: (TDTenure) -> Unit)
             FilterChip(
                 selected = selected == tenure,
                 onClick = { onSelected(tenure) },
-                label = { Text(tenure.label) }
+                modifier = Modifier.widthIn(min = 92.dp),
+                label = { ChipText(tenure.label) }
             )
         }
     }
@@ -379,23 +383,35 @@ private fun CustomTypeSelector(selected: CustomCalculatorType, onSelected: (Cust
         FilterChip(
             selected = selected == CustomCalculatorType.Simple,
             onClick = { onSelected(CustomCalculatorType.Simple) },
-            label = { Text("Simple Interest") }
+            modifier = Modifier.widthIn(min = 150.dp),
+            label = { ChipText("Simple Interest") }
         )
         FilterChip(
             selected = selected == CustomCalculatorType.Compound,
             onClick = { onSelected(CustomCalculatorType.Compound) },
-            label = { Text("Compound Interest") }
+            modifier = Modifier.widthIn(min = 170.dp),
+            label = { ChipText("Compound Interest") }
         )
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ChipRow(content: @Composable RowScope.() -> Unit) {
-    Row(
+private fun ChipRow(content: @Composable FlowRowScope.() -> Unit) {
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         content = content
+    )
+}
+
+@Composable
+private fun ChipText(text: String) {
+    Text(
+        text = text,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
     )
 }
 
@@ -642,7 +658,8 @@ private fun SchemeSpecificFields(
                         FilterChip(
                             selected = state.compoundFrequencyOption == option,
                             onClick = { onCompoundFrequencyChange(option) },
-                            label = { Text(option.label) }
+                            modifier = Modifier.widthIn(min = 108.dp),
+                            label = { ChipText(option.label) }
                         )
                     }
                 }
@@ -682,12 +699,6 @@ private fun InstallmentsField(
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(force = true) })
-            )
-            Icon(
-                imageVector = Icons.Filled.Edit,
-                contentDescription = "Edit installments",
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         error?.let {

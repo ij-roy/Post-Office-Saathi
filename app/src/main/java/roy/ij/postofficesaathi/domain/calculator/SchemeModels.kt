@@ -105,6 +105,20 @@ data class CalculatorInput(
     val scssExtended: Boolean = false
 )
 
+data class CalculatorInputSummary(
+    val schemeType: SchemeType = SchemeType.RD,
+    val amount: Double = 0.0,
+    val startDate: LocalDate = LocalDate.MIN,
+    val toDate: LocalDate? = null,
+    val installmentsPaid: Int = 0,
+    val tdTenure: TDTenure = TDTenure.FiveYears,
+    val customType: CustomCalculatorType = CustomCalculatorType.Simple,
+    val customYears: Double = 0.0,
+    val compoundFrequencyOption: CompoundFrequencyOption = CompoundFrequencyOption.Annually,
+    val compoundingFrequency: CompoundingFrequency = CompoundingFrequency.SIMPLE,
+    val scssExtended: Boolean = false
+)
+
 data class FYInterestRow(
     val financialYear: String,
     val interestAccrued: Double,
@@ -129,6 +143,6 @@ data class CalculatorResult(
     val monthlyIncome: Double? = null,
     val fyWiseBreakdown: List<FYInterestRow> = emptyList(),
     val continuationProjections: Map<Int, ContinuationProjection> = emptyMap(),
-    val notes: List<String> = emptyList()
+    val notes: List<String> = emptyList(),
+    val inputSummary: CalculatorInputSummary = CalculatorInputSummary()
 )
-

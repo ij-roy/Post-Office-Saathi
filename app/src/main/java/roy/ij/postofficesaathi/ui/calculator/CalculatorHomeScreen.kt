@@ -24,18 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ChildCare
-import androidx.compose.material.icons.filled.Eco
-import androidx.compose.material.icons.filled.Elderly
-import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Savings
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Verified
-import androidx.compose.material.icons.filled.Woman
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -50,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -182,7 +170,7 @@ private fun SchemeCard(card: CalculatorSchemeCardUi, onClick: () -> Unit) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = card.schemeIcon(),
+                        imageVector = card.schemeType.schemeIcon(),
                         contentDescription = null,
                         modifier = Modifier.size(22.dp)
                     )
@@ -244,24 +232,6 @@ private fun SchemeCard(card: CalculatorSchemeCardUi, onClick: () -> Unit) {
         }
     }
 }
-
-private fun CalculatorSchemeCardUi.schemeIcon(): ImageVector =
-    when (schemeType) {
-        SchemeType.RD -> Icons.Filled.Autorenew
-        SchemeType.TD -> Icons.Filled.HourglassTop
-        SchemeType.MIS -> Icons.Filled.Payments
-        SchemeType.NSC -> Icons.Filled.Verified
-        SchemeType.KVP -> Icons.Filled.Eco
-        SchemeType.PPF -> Icons.Filled.Savings
-        SchemeType.SSY -> Icons.Filled.ChildCare
-        SchemeType.SCSS -> Icons.Filled.Elderly
-        SchemeType.SB -> Icons.Filled.AccountBalance
-        SchemeType.SIMPLE_INTEREST,
-        SchemeType.COMPOUND_INTEREST -> Icons.Filled.Tune
-        SchemeType.MSSC -> Icons.Filled.Woman
-        SchemeType.RD_REBATE,
-        SchemeType.PMI -> Icons.Filled.Tune
-    }
 
 @Composable
 private fun CalculatorSkeletonList() {

@@ -201,7 +201,8 @@ object InterestEngine {
             interestEarned = roundMoney(rebate),
             maturityAmount = roundMoney(input.amount * input.installmentsPaid - rebate),
             maturityDate = input.startDate,
-            notes = listOf("Rebate is an estimate for missed RD installments.")
+            notes = listOf("Rebate is an estimate for missed RD installments."),
+            inputSummary = input.toSummary()
         )
     }
 
@@ -228,9 +229,25 @@ object InterestEngine {
             maturityDate = maturityDate,
             monthlyIncome = monthlyIncome,
             fyWiseBreakdown = fyRows(input.startDate, maturityDate, roundedInterest),
-            notes = notes
+            notes = notes,
+            inputSummary = input.toSummary()
         )
     }
+
+    private fun CalculatorInput.toSummary(): CalculatorInputSummary =
+        CalculatorInputSummary(
+            schemeType = schemeType,
+            amount = amount,
+            startDate = startDate,
+            toDate = toDate,
+            installmentsPaid = installmentsPaid,
+            tdTenure = tdTenure,
+            customType = customType,
+            customYears = customYears,
+            compoundFrequencyOption = compoundFrequencyOption,
+            compoundingFrequency = compoundingFrequency,
+            scssExtended = scssExtended
+        )
 
     private fun continuationProjections(
         currentCorpus: Double,
@@ -267,4 +284,3 @@ object InterestEngine {
         }
     }
 }
-

@@ -311,7 +311,11 @@ fun PostOfficeSaathiApp(
                         analytics.logButtonTap("calculator_result_back", AnalyticsScreen.CalculatorResult)
                         navController.popBackStack()
                     },
-                    onShare = {
+                    onShareWhatsApp = {
+                        analytics.logEvent(AnalyticsEvent.ResultShared)
+                        calculatorFlowViewModel.shareText()?.let { shareText(context, it, preferWhatsApp = true) }
+                    },
+                    onShareMore = {
                         analytics.logEvent(AnalyticsEvent.ResultShared)
                         calculatorFlowViewModel.shareText()?.let { shareText(context, it) }
                     }
@@ -489,12 +493,26 @@ private fun shareDocument(context: Context, uriString: String) {
     context.startActivity(Intent.createChooser(intent, "Share PDF"))
 }
 
-private fun shareText(context: Context, text: String) {
+private fun shareText(context: Context, text: String, preferWhatsApp: Boolean = false) {
+    if (preferWhatsApp && tryShareTextWithPackage(context, text, "com.whatsapp")) return
+    if (preferWhatsApp && tryShareTextWithPackage(context, text, "com.whatsapp.w4b")) return
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)
     }
     context.startActivity(Intent.createChooser(intent, "Share calculation"))
+}
+
+private fun tryShareTextWithPackage(context: Context, text: String, packageName: String): Boolean {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+        setPackage(packageName)
+    }
+    return runCatching {
+        context.startActivity(intent)
+        true
+    }.getOrDefault(false)
 }
 
 private fun String.toDocumentUri(context: Context): Uri {

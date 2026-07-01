@@ -33,6 +33,24 @@ class InterestEngineTest {
     }
 
     @Test
+    fun recurringDepositResultCarriesInputContext() {
+        val result = InterestEngine.calculate(
+            CalculatorInput(
+                schemeType = SchemeType.RD,
+                amount = 500.0,
+                startDate = LocalDate.parse("2026-07-01"),
+                ratePercent = 6.7,
+                compoundingFrequency = CompoundingFrequency.QUARTERLY,
+                installmentsPaid = 60
+            )
+        )
+
+        assertEquals(500.0, result.inputSummary.amount, 0.001)
+        assertEquals(60, result.inputSummary.installmentsPaid)
+        assertEquals(LocalDate.parse("2026-07-01"), result.inputSummary.startDate)
+    }
+
+    @Test
     fun monthlyIncomeSchemeShowsMonthlyPayoutAndPrincipalAtMaturity() {
         val result = InterestEngine.calculate(
             CalculatorInput(
@@ -68,4 +86,3 @@ class InterestEngineTest {
         assertEquals(LocalDate.parse("2029-04-01"), result.maturityDate)
     }
 }
-
