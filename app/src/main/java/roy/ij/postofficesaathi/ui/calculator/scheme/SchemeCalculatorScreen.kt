@@ -43,13 +43,21 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -182,7 +190,8 @@ fun SchemeCalculatorRoute(
         onCustomYearsChange = viewModel::updateCustomYears,
         onCompoundFrequencyChange = viewModel::updateCompoundFrequency,
         onScssExtendedChange = viewModel::updateScssExtended,
-        onCalculate = viewModel::calculate
+        onCalculate = viewModel::calculate,
+        onAnimationComplete = viewModel::onCalculationAnimationComplete
     )
 }
 
@@ -203,10 +212,12 @@ fun SchemeCalculatorScreen(
     onCustomYearsChange: (String) -> Unit,
     onCompoundFrequencyChange: (CompoundFrequencyOption) -> Unit,
     onScssExtendedChange: (Boolean) -> Unit,
-    onCalculate: () -> Unit
+    onCalculate: () -> Unit,
+    onAnimationComplete: () -> Unit
 ) {
     val presentation = SchemeCalculatorPresentation.forScheme(state.schemeType)
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     SaathiScreen {
         Column(
             modifier = Modifier
@@ -308,11 +319,18 @@ fun SchemeCalculatorScreen(
                     SaathiPrimaryButton(
                         text = if (state.isCalculating) "Calculating..." else "Calculate",
                         enabled = !state.isCalculating && !state.isLoading,
-                        onClick = onCalculate
+                        onClick = {
+                            focusManager.clearFocus(force = true)
+                            keyboardController?.hide()
+                            onCalculate()
+                        }
                     )
                     Spacer(Modifier.height(24.dp))
                 }
             }
+        }
+        if (state.isCalculating && state.pendingResult != null) {
+            CalculatingAnimationOverlay(onAnimationComplete = onAnimationComplete)
         }
     }
 }
@@ -688,5 +706,60 @@ private fun WarningBanner(text: String) {
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.24f))
     ) {
         Text(text, modifier = Modifier.padding(14.dp), style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun CalculatingAnimationOverlay(
+    onAnimationComplete: () -> Unit
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.Asset("calculating.json"))
+    val animationState = animateLottieCompositionAsState(
+        composition = composition,
+        iterations = 1
+    )
+
+    LaunchedEffect(animationState.isAtEnd, animationState.progress) {
+        if (animationState.isAtEnd && animationState.progress == 1f) {
+            onAnimationComplete()
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val textAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
+    // Full screen glassmorphic layout
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(enabled = true, onClick = {}) // Block clicks underneath
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.94f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            LottieAnimation(
+                composition = composition,
+                progress = { animationState.progress },
+                modifier = Modifier.size(260.dp)
+            )
+            Text(
+                text = "Calculating...",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.graphicsLayer { alpha = textAlpha }
+            )
+        }
     }
 }

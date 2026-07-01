@@ -55,6 +55,7 @@ data class SchemeCalculatorUiState(
     val rateVersion: String? = null,
     val isLoading: Boolean = true,
     val isCalculating: Boolean = false,
+    val pendingResult: CalculatorResult? = null,
     val errors: Map<String, String> = emptyMap(),
     val message: String? = null,
     val messageId: Long = 0L
@@ -230,7 +231,14 @@ class SchemeCalculatorViewModel(
                 logRateFallback(state.officialRate)
                 showMessage("Rate unavailable for this date. Using current rate.")
             }
-            _uiState.update { it.copy(isCalculating = false) }
+            _uiState.update { it.copy(pendingResult = result) }
+        }
+    }
+
+    fun onCalculationAnimationComplete() {
+        val result = _uiState.value.pendingResult ?: return
+        viewModelScope.launch(Dispatchers.Default) {
+            _uiState.update { it.copy(isCalculating = false, pendingResult = null) }
             _externalActions.emit(SchemeCalculatorExternalAction.ShowResult(result))
         }
     }
