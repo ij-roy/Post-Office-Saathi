@@ -32,6 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,14 +83,14 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         HomeActionCard(
-                            title = "Download Forms",
+                            title = "Download\nForms",
                             visual = HomeVisual.Forms,
                             modifier = Modifier.weight(1f),
                             onClick = onOpenForms
                         )
 
                         HomeActionCard(
-                            title = "Create PDF",
+                            title = "Create\nPDF",
                             visual = HomeVisual.Pdf,
                             modifier = Modifier.weight(1f),
                             onClick = onCreatePdf
@@ -264,18 +266,15 @@ private fun HomeActionCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 244.dp)
+                .heightIn(min = 210.dp)
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(142.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.24f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                    .height(130.dp)
             ) {
                 when (visual) {
                     HomeVisual.Forms -> HomeFormsIllustration(Modifier.fillMaxSize())
@@ -286,7 +285,11 @@ private fun HomeActionCard(
             Text(
                 text = title,
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp
+                ),
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis

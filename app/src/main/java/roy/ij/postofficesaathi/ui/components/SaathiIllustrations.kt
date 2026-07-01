@@ -151,78 +151,144 @@ fun OnboardingFormsIllustration(modifier: Modifier = Modifier) {
 @Composable
 fun HomeCalculatorIllustration(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "homeCalculator")
-    val coinLift by transition.animateFloat(
-        initialValue = -5f,
-        targetValue = 6f,
-        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "homeCalculatorCoinLift"
-    )
-    val linePulse by transition.animateFloat(
-        initialValue = 0.45f,
+    val barGrow by transition.animateFloat(
+        initialValue = 0.72f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "homeCalculatorLinePulse"
+        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "homeCalcBarGrow"
+    )
+    val percentPulse by transition.animateFloat(
+        initialValue = 0.90f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "homeCalcPercentPulse"
+    )
+    val arrowBob by transition.animateFloat(
+        initialValue = -3f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "homeCalcArrowBob"
     )
 
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
-    val surface = MaterialTheme.colorScheme.surface
+    val tertiary = MaterialTheme.colorScheme.tertiary
     val onSurface = MaterialTheme.colorScheme.onSurface
-    val outline = MaterialTheme.colorScheme.outline
-    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
 
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
         val cx = w / 2f
         val cy = h / 2f
-        val ledgerW = w * 0.58f
-        val ledgerH = h * 0.56f
-        val ledgerX = cx - ledgerW / 2f
-        val ledgerY = cy - ledgerH / 2f + 6f
 
-        drawRoundRect(
-            color = surface.copy(alpha = 0.92f),
-            topLeft = Offset(ledgerX, ledgerY),
-            size = Size(ledgerW, ledgerH),
-            cornerRadius = CornerRadius(12f)
+        // === Bar chart ===
+        val barCount = 10
+        val barHeights = listOf(0.20f, 0.32f, 0.28f, 0.45f, 0.38f, 0.58f, 0.50f, 0.72f, 0.65f, 0.85f)
+        val totalBarAreaW = w * 0.75f
+        val barGap = totalBarAreaW * 0.035f
+        val barW = (totalBarAreaW - (barCount - 1) * barGap) / barCount
+        val chartBaseY = cy + h * 0.25f
+        val chartStartX = cx - totalBarAreaW / 2f
+
+        // Bar colors — gradient from secondary to primary
+        val barColors = List(barCount) { i ->
+            val fraction = i.toFloat() / (barCount - 1)
+            val r = secondary.red + (primary.red - secondary.red) * fraction
+            val g = secondary.green + (primary.green - secondary.green) * fraction
+            val b = secondary.blue + (primary.blue - secondary.blue) * fraction
+            Color(r, g, b).copy(alpha = 0.25f + fraction * 0.20f)
+        }
+        val barBorderColors = List(barCount) { i ->
+            val fraction = i.toFloat() / (barCount - 1)
+            val r = secondary.red + (primary.red - secondary.red) * fraction
+            val g = secondary.green + (primary.green - secondary.green) * fraction
+            val b = secondary.blue + (primary.blue - secondary.blue) * fraction
+            Color(r, g, b).copy(alpha = 0.45f + fraction * 0.20f)
+        }
+
+        // Baseline
+        drawLine(
+            color = onSurface.copy(alpha = 0.10f),
+            start = Offset(chartStartX - barW * 0.6f, chartBaseY),
+            end = Offset(chartStartX + totalBarAreaW + barW * 0.6f, chartBaseY),
+            strokeWidth = 1.5f,
+            cap = StrokeCap.Round
         )
-        drawRoundRect(
-            color = outline.copy(alpha = 0.24f),
-            topLeft = Offset(ledgerX, ledgerY),
-            size = Size(ledgerW, ledgerH),
-            cornerRadius = CornerRadius(12f),
-            style = Stroke(width = 1.5f)
-        )
-        drawRoundRect(
-            color = primaryContainer.copy(alpha = 0.40f),
-            topLeft = Offset(ledgerX + 10f, ledgerY + 10f),
-            size = Size(ledgerW - 20f, ledgerH * 0.20f),
-            cornerRadius = CornerRadius(8f)
-        )
-        repeat(3) { index ->
-            val lineY = ledgerY + ledgerH * (0.42f + index * 0.18f)
+
+        // Draw bars + collect top positions for trend line
+        val barTops = mutableListOf<Offset>()
+        val maxBarH = h * 0.55f
+        for (i in 0 until barCount) {
+            val x = chartStartX + i * (barW + barGap)
+            val animatedHeight = maxBarH * barHeights[i] * barGrow
+            val barTop = chartBaseY - animatedHeight
+
+            drawRoundRect(
+                color = barColors[i],
+                topLeft = Offset(x, barTop),
+                size = Size(barW, animatedHeight),
+                cornerRadius = CornerRadius(barW * 0.30f, barW * 0.30f)
+            )
+            drawRoundRect(
+                color = barBorderColors[i],
+                topLeft = Offset(x, barTop),
+                size = Size(barW, animatedHeight),
+                cornerRadius = CornerRadius(barW * 0.30f, barW * 0.30f),
+                style = Stroke(width = 1.5f)
+            )
+
+            barTops.add(Offset(x + barW / 2f, barTop))
+        }
+
+        // === Trend line connecting bar tops ===
+        for (i in 0 until barTops.size - 1) {
             drawLine(
-                color = onSurface.copy(alpha = (0.12f + index * 0.04f) * linePulse),
-                start = Offset(ledgerX + ledgerW * 0.16f, lineY),
-                end = Offset(ledgerX + ledgerW * (0.82f - index * 0.08f), lineY),
-                strokeWidth = 3f,
+                color = primary.copy(alpha = 0.40f),
+                start = barTops[i],
+                end = barTops[i + 1],
+                strokeWidth = 2f,
                 cap = StrokeCap.Round
             )
         }
-        repeat(3) { index ->
-            val coinR = w * (0.055f + index * 0.004f)
-            val coinCx = cx - w * 0.18f + index * w * 0.18f
-            val coinCy = cy - h * 0.22f + coinLift * (index + 1) * 0.25f
-            drawCircle(secondary.copy(alpha = 0.16f), radius = coinR, center = Offset(coinCx, coinCy))
-            drawCircle(secondary.copy(alpha = 0.44f), radius = coinR, center = Offset(coinCx, coinCy), style = Stroke(width = 2f))
+        // Dots at each bar top
+        barTops.forEach { pt ->
+            drawCircle(primary.copy(alpha = 0.50f), radius = 3f, center = pt)
         }
-        val percentX = cx + w * 0.18f
-        val percentY = cy + h * 0.20f
-        drawCircle(primary.copy(alpha = 0.16f), radius = w * 0.10f, center = Offset(percentX, percentY))
-        drawLine(primary.copy(alpha = 0.60f), Offset(percentX - 13f, percentY + 13f), Offset(percentX + 13f, percentY - 13f), strokeWidth = 3.2f, cap = StrokeCap.Round)
-        drawCircle(primary.copy(alpha = 0.55f), radius = 4f, center = Offset(percentX - 9f, percentY - 9f))
-        drawCircle(primary.copy(alpha = 0.55f), radius = 4f, center = Offset(percentX + 9f, percentY + 9f))
+
+        // === Upward arrow at the end of the trend ===
+        val lastTop = barTops.last()
+        val arrowTipX = lastTop.x + barW * 1.4f
+        val arrowTipY = lastTop.y - h * 0.12f + arrowBob
+        val arrowBaseX = lastTop.x
+        val arrowBaseY = lastTop.y + arrowBob * 0.5f
+
+        drawLine(primary.copy(alpha = 0.48f), Offset(arrowBaseX, arrowBaseY), Offset(arrowTipX, arrowTipY), strokeWidth = 2.5f, cap = StrokeCap.Round)
+        val ahs = h * 0.045f
+        drawLine(primary.copy(alpha = 0.48f), Offset(arrowTipX, arrowTipY), Offset(arrowTipX - ahs, arrowTipY + ahs * 1.2f), strokeWidth = 2.5f, cap = StrokeCap.Round)
+        drawLine(primary.copy(alpha = 0.48f), Offset(arrowTipX, arrowTipY), Offset(arrowTipX - ahs * 1.3f, arrowTipY + ahs * 0.1f), strokeWidth = 2.5f, cap = StrokeCap.Round)
+
+        // === Percentage badge (top-left of chart) ===
+        val badgeCx = cx - w * 0.22f
+        val badgeCy = cy - h * 0.22f
+        val badgeR = h * 0.14f * percentPulse
+
+        drawCircle(primary.copy(alpha = 0.12f), radius = badgeR, center = Offset(badgeCx, badgeCy))
+        drawCircle(primary.copy(alpha = 0.42f), radius = badgeR, center = Offset(badgeCx, badgeCy), style = Stroke(width = 2f))
+
+        // Percent sign inside badge
+        val pSize = badgeR * 0.44f
+        drawLine(primary.copy(alpha = 0.55f), Offset(badgeCx - pSize, badgeCy + pSize * 0.8f), Offset(badgeCx + pSize, badgeCy - pSize * 0.8f), strokeWidth = 2.2f, cap = StrokeCap.Round)
+        drawCircle(primary.copy(alpha = 0.50f), radius = pSize * 0.30f, center = Offset(badgeCx - pSize * 0.55f, badgeCy - pSize * 0.45f))
+        drawCircle(primary.copy(alpha = 0.50f), radius = pSize * 0.30f, center = Offset(badgeCx + pSize * 0.55f, badgeCy + pSize * 0.45f))
+
+        // === Small decorative coin ===
+        val coinCx = cx + w * 0.12f
+        val coinCy = cy - h * 0.20f + arrowBob * 0.4f
+        val coinR = h * 0.08f
+        drawCircle(tertiary.copy(alpha = 0.14f), radius = coinR, center = Offset(coinCx, coinCy))
+        drawCircle(tertiary.copy(alpha = 0.36f), radius = coinR, center = Offset(coinCx, coinCy), style = Stroke(width = 1.5f))
+        drawLine(tertiary.copy(alpha = 0.30f), Offset(coinCx, coinCy - coinR * 0.35f), Offset(coinCx, coinCy + coinR * 0.35f), strokeWidth = 1.5f, cap = StrokeCap.Round)
+        drawLine(tertiary.copy(alpha = 0.24f), Offset(coinCx - coinR * 0.28f, coinCy - coinR * 0.12f), Offset(coinCx + coinR * 0.28f, coinCy - coinR * 0.12f), strokeWidth = 1.2f, cap = StrokeCap.Round)
     }
 }
 
