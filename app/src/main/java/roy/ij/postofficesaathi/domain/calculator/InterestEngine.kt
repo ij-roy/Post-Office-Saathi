@@ -1,10 +1,14 @@
 package roy.ij.postofficesaathi.domain.calculator
 
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 import kotlin.math.ln
 import kotlin.math.pow
 
 object InterestEngine {
+    private data class InterestEvent(val date: LocalDate, val amount: Double)
+
     fun calculate(input: CalculatorInput): CalculatorResult =
         when (input.schemeType) {
             SchemeType.RD -> recurringDeposit(input)
@@ -35,6 +39,7 @@ object InterestEngine {
             totalDeposited = deposited,
             maturityAmount = corpus,
             maturityDate = input.startDate.plusMonths(months.toLong()),
+            fyWiseBreakdown = rdFyRows(input.startDate, monthlyInstallment, input.ratePercent, paidMonths),
             notes = listOf("Recurring Deposit tenure is shown as 60 months.")
         )
         return result.copy(
@@ -52,7 +57,8 @@ object InterestEngine {
             title = "Time Deposit ${input.tdTenure.label}",
             totalDeposited = input.amount,
             maturityAmount = timeDepositMaturity(input.amount, input.ratePercent, input.tdTenure.years),
-            maturityDate = input.startDate.plusYears(input.tdTenure.years.toLong())
+            maturityDate = input.startDate.plusYears(input.tdTenure.years.toLong()),
+            fyWiseBreakdown = timeDepositFyRows(input.startDate, input.amount, input.ratePercent, input.tdTenure.years)
         )
 
     private fun monthlyIncome(input: CalculatorInput): CalculatorResult {
@@ -67,6 +73,7 @@ object InterestEngine {
             monthlyIncome = roundMoney(monthlyIncome),
             interestEarnedOverride = totalInterest,
             totalReceivedOverride = input.amount + totalInterest,
+            fyWiseBreakdown = payoutFyRows(input.startDate, monthlyIncome, payments = 60, monthsBetweenPayments = 1, expectedTotal = totalInterest),
             notes = listOf("Monthly income is shown before tax.")
         )
     }
@@ -84,6 +91,7 @@ object InterestEngine {
             totalDeposited = input.amount,
             maturityAmount = input.amount * 2.0,
             maturityDate = input.startDate.plusMonths(monthsToDouble),
+            fyWiseBreakdown = kisanVikasPatraFyRows(input.startDate, input.amount, input.ratePercent, monthsToDouble),
             notes = listOf("KVP maturity is estimated from the active annual rate.")
         )
     }
@@ -112,6 +120,7 @@ object InterestEngine {
             totalDeposited = deposited,
             maturityAmount = corpus,
             maturityDate = input.startDate.plusYears(years.toLong()),
+            fyWiseBreakdown = emptyList(),
             notes = note
         )
     }
@@ -129,6 +138,7 @@ object InterestEngine {
             monthlyIncome = roundMoney(quarterlyPayout),
             interestEarnedOverride = interest,
             totalReceivedOverride = input.amount + interest,
+            fyWiseBreakdown = payoutFyRows(input.startDate, quarterlyPayout, payments = years * 4, monthsBetweenPayments = 3, expectedTotal = interest),
             notes = listOf("SCSS interest is shown as quarterly payout.")
         )
     }
@@ -143,7 +153,8 @@ object InterestEngine {
             totalDeposited = input.amount,
             maturityAmount = input.amount + interest,
             maturityDate = endDate,
-            interestEarnedOverride = interest
+            interestEarnedOverride = interest,
+            fyWiseBreakdown = dailySimpleFyRows(input.startDate, endDate, interest)
         )
     }
 
@@ -160,7 +171,15 @@ object InterestEngine {
             title = title,
             totalDeposited = input.amount,
             maturityAmount = maturity,
-            maturityDate = input.startDate.plusYears(years.toLong())
+            maturityDate = input.startDate.plusYears(years.toLong()),
+            fyWiseBreakdown = compoundFyRows(
+                startDate = input.startDate,
+                principal = input.amount,
+                annualRatePercent = input.ratePercent,
+                periodsPerYear = periodsPerYear,
+                periods = periods.toDouble(),
+                expectedTotal = maturity - input.amount
+            )
         )
     }
 
@@ -172,7 +191,12 @@ object InterestEngine {
             totalDeposited = input.amount,
             maturityAmount = input.amount + interest,
             maturityDate = input.startDate.plusMonths((input.customYears * 12).toLong()),
-            interestEarnedOverride = interest
+            interestEarnedOverride = interest,
+            fyWiseBreakdown = dailySimpleFyRows(
+                startDate = input.startDate,
+                endDate = input.startDate.plusMonths((input.customYears * 12).toLong()),
+                totalInterest = interest
+            )
         )
     }
 
@@ -185,7 +209,15 @@ object InterestEngine {
             title = "Compound Interest",
             totalDeposited = input.amount,
             maturityAmount = maturity,
-            maturityDate = input.startDate.plusMonths((input.customYears * 12).toLong())
+            maturityDate = input.startDate.plusMonths((input.customYears * 12).toLong()),
+            fyWiseBreakdown = compoundFyRows(
+                startDate = input.startDate,
+                principal = input.amount,
+                annualRatePercent = input.ratePercent,
+                periodsPerYear = periodsPerYear,
+                periods = periods,
+                expectedTotal = maturity - input.amount
+            )
         )
     }
 
@@ -214,6 +246,7 @@ object InterestEngine {
         monthlyIncome: Double? = null,
         interestEarnedOverride: Double? = null,
         totalReceivedOverride: Double? = null,
+        fyWiseBreakdown: List<FYInterestRow> = emptyList(),
         notes: List<String> = emptyList()
     ): CalculatorResult {
         val interestEarned = interestEarnedOverride ?: (maturityAmount - totalDeposited)
@@ -230,7 +263,7 @@ object InterestEngine {
             totalReceived = roundMoney(totalReceivedOverride ?: roundedMaturity),
             maturityDate = maturityDate,
             monthlyIncome = monthlyIncome,
-            fyWiseBreakdown = fyRows(input.startDate, maturityDate, roundedInterest),
+            fyWiseBreakdown = fyWiseBreakdown,
             notes = notes,
             inputSummary = input.toSummary()
         )
@@ -267,6 +300,133 @@ object InterestEngine {
     private fun timeDepositMaturity(principal: Double, annualRatePercent: Double, years: Int): Double =
         principal + timeDepositAnnualInterest(principal, annualRatePercent) * years
 
+    private fun timeDepositFyRows(startDate: LocalDate, principal: Double, annualRatePercent: Double, years: Int): List<FYInterestRow> {
+        val annualInterest = timeDepositAnnualInterest(principal, annualRatePercent)
+        val events = (1..years).map { year ->
+            InterestEvent(startDate.plusYears(year.toLong()), annualInterest)
+        }
+        return groupEventsByFinancialYear(events, expectedTotal = annualInterest * years)
+    }
+
+    private fun payoutFyRows(
+        startDate: LocalDate,
+        payout: Double,
+        payments: Int,
+        monthsBetweenPayments: Int,
+        expectedTotal: Double
+    ): List<FYInterestRow> {
+        val events = (1..payments).map { payment ->
+            InterestEvent(startDate.plusMonths((payment * monthsBetweenPayments).toLong()), payout)
+        }
+        return groupEventsByFinancialYear(events, expectedTotal = expectedTotal)
+    }
+
+    private fun rdFyRows(
+        startDate: LocalDate,
+        monthlyDeposit: Double,
+        annualRatePercent: Double,
+        installmentsPaid: Int
+    ): List<FYInterestRow> {
+        val paidMonths = installmentsPaid.coerceAtLeast(0)
+        if (paidMonths == 0 || monthlyDeposit <= 0.0) return emptyList()
+
+        val rows = mutableListOf<FYInterestRow>()
+        var previousInterest = 0.0
+        var previousRoundedCumulative = 0.0
+        var fyStartYear = if (startDate.monthValue >= 4) startDate.year else startDate.year - 1
+        val startMonth = YearMonth.from(startDate)
+
+        while (true) {
+            val fyEnd = LocalDate.of(fyStartYear + 1, 3, 31)
+            val monthsAtFyEnd = (ChronoUnit.MONTHS.between(startMonth, YearMonth.from(fyEnd)) + 1).toInt()
+            val monthsPaid = monthsAtFyEnd.coerceIn(0, paidMonths)
+            if (monthsPaid > 0) {
+                val cumulativeInterest = rdMaturity(monthlyDeposit, annualRatePercent, monthsPaid) - monthlyDeposit * monthsPaid
+                val interestForFy = cumulativeInterest - previousInterest
+                val roundedInterest = roundMoney(interestForFy)
+                val roundedCumulative = roundMoney(previousRoundedCumulative + roundedInterest)
+                val labelDate = if (monthsPaid == paidMonths) startDate.plusMonths(monthsPaid.toLong()) else fyEnd
+                rows += FYInterestRow(
+                    financialYear = financialYearLabel(labelDate),
+                    interestAccrued = roundedInterest,
+                    cumulativeTotal = roundedCumulative
+                )
+                previousInterest = cumulativeInterest
+                previousRoundedCumulative = roundedCumulative
+            }
+            if (monthsPaid >= paidMonths) break
+            fyStartYear += 1
+        }
+
+        return adjustFinalRow(rows, expectedTotal = rdMaturity(monthlyDeposit, annualRatePercent, paidMonths) - monthlyDeposit * paidMonths)
+    }
+
+    private fun compoundFyRows(
+        startDate: LocalDate,
+        principal: Double,
+        annualRatePercent: Double,
+        periodsPerYear: Int,
+        periods: Double,
+        expectedTotal: Double
+    ): List<FYInterestRow> {
+        if (periods <= 0 || periodsPerYear <= 0 || principal <= 0.0) return emptyList()
+        val monthsBetweenPeriods = 12 / periodsPerYear
+        val periodicRate = annualRatePercent / 100.0 / periodsPerYear
+        var balance = principal
+        val fullPeriods = periods.toInt()
+        val events = (1..fullPeriods).map { period ->
+            val interest = balance * periodicRate
+            balance += interest
+            InterestEvent(startDate.plusMonths((period * monthsBetweenPeriods).toLong()), interest)
+        }.toMutableList()
+        val partialPeriod = periods - fullPeriods
+        if (partialPeriod > 0.000001) {
+            val interest = balance * ((1 + periodicRate).pow(partialPeriod) - 1)
+            events += InterestEvent(startDate.plusMonths((periods * monthsBetweenPeriods).toLong()), interest)
+        }
+        return groupEventsByFinancialYear(events, expectedTotal = expectedTotal)
+    }
+
+    private fun kisanVikasPatraFyRows(
+        startDate: LocalDate,
+        principal: Double,
+        annualRatePercent: Double,
+        maturityMonths: Long
+    ): List<FYInterestRow> {
+        if (principal <= 0.0 || maturityMonths <= 0) return emptyList()
+        val events = mutableListOf<InterestEvent>()
+        var balance = principal
+        var month = 12L
+        while (month < maturityMonths) {
+            val interest = balance * annualRatePercent / 100.0
+            balance += interest
+            events += InterestEvent(startDate.plusMonths(month), interest)
+            month += 12
+        }
+        val remainingInterest = principal - events.sumOf { it.amount }
+        if (remainingInterest > 0.0) {
+            events += InterestEvent(startDate.plusMonths(maturityMonths), remainingInterest)
+        }
+        return groupEventsByFinancialYear(events, expectedTotal = principal)
+    }
+
+    private fun dailySimpleFyRows(startDate: LocalDate, endDate: LocalDate, totalInterest: Double): List<FYInterestRow> {
+        val totalDays = ChronoUnit.DAYS.between(startDate, endDate).coerceAtLeast(0)
+        if (totalDays == 0L || totalInterest == 0.0) return emptyList()
+        val events = mutableListOf<InterestEvent>()
+        var cursor = startDate
+        while (cursor.isBefore(endDate)) {
+            val fyStartYear = if (cursor.monthValue >= 4) cursor.year else cursor.year - 1
+            val nextFyStart = LocalDate.of(fyStartYear + 1, 4, 1)
+            val segmentEnd = minOf(endDate, nextFyStart)
+            val segmentDays = ChronoUnit.DAYS.between(cursor, segmentEnd)
+            val segmentInterest = totalInterest * segmentDays / totalDays
+            events += InterestEvent(segmentEnd.minusDays(1), segmentInterest)
+            cursor = segmentEnd
+        }
+        return groupEventsByFinancialYear(events, expectedTotal = totalInterest)
+    }
+
     private fun continuationProjections(
         currentCorpus: Double,
         periodicContribution: Double,
@@ -288,17 +448,39 @@ object InterestEngine {
             )
         }
 
-    private fun fyRows(startDate: LocalDate, maturityDate: LocalDate, totalInterest: Double): List<FYInterestRow> {
-        val years = (maturityDate.year - startDate.year).coerceAtLeast(1)
-        val perYear = totalInterest / years
+    private fun groupEventsByFinancialYear(events: List<InterestEvent>, expectedTotal: Double): List<FYInterestRow> {
+        if (events.isEmpty()) return emptyList()
+        val grouped = linkedMapOf<String, Double>()
+        events.sortedBy { it.date }.forEach { event ->
+            val label = financialYearLabel(event.date)
+            grouped[label] = (grouped[label] ?: 0.0) + event.amount
+        }
+        return adjustFinalRow(
+            grouped.map { (label, amount) ->
+                FYInterestRow(
+                    financialYear = label,
+                    interestAccrued = roundMoney(amount),
+                    cumulativeTotal = 0.0
+                )
+            },
+            expectedTotal = expectedTotal
+        )
+    }
+
+    private fun adjustFinalRow(rows: List<FYInterestRow>, expectedTotal: Double): List<FYInterestRow> {
+        if (rows.isEmpty()) return rows
+        val roundedExpected = roundMoney(expectedTotal)
+        val roundedRows = rows.toMutableList()
+        val roundedSum = roundMoney(roundedRows.sumOf { it.interestAccrued })
+        val delta = roundMoney(roundedExpected - roundedSum)
+        if (delta != 0.0) {
+            val last = roundedRows.last()
+            roundedRows[roundedRows.lastIndex] = last.copy(interestAccrued = roundMoney(last.interestAccrued + delta))
+        }
         var cumulative = 0.0
-        return (0 until years).map { index ->
-            cumulative += perYear
-            FYInterestRow(
-                financialYear = financialYearLabel(startDate.plusYears(index.toLong())),
-                interestAccrued = roundMoney(perYear),
-                cumulativeTotal = roundMoney(cumulative)
-            )
+        return roundedRows.map { row ->
+            cumulative = roundMoney(cumulative + row.interestAccrued)
+            row.copy(cumulativeTotal = cumulative)
         }
     }
 }
