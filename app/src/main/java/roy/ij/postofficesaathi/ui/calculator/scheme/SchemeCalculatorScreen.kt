@@ -69,6 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.ln
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.domain.calculator.CalculatorResult
 import roy.ij.postofficesaathi.domain.calculator.CompoundFrequencyOption
@@ -88,7 +89,7 @@ data class SchemeCalculatorPresentation(
     val amountPlaceholder: String?,
     val fromDateLabel: String,
     val toDateLabel: String,
-    val showToDate: Boolean,
+    val showDateRange: Boolean,
     val openingDateDialogTitle: String,
     val installmentsLabel: String
 ) {
@@ -102,27 +103,47 @@ data class SchemeCalculatorPresentation(
                     amountPlaceholder = "Enter monthly amount (e.g. 5000)",
                     fromDateLabel = "From",
                     toDateLabel = "To",
-                    showToDate = true,
+                    showDateRange = true,
                     openingDateDialogTitle = "Select opening date",
                     installmentsLabel = "Installments"
                 )
+                SchemeType.TD,
+                SchemeType.MIS,
+                SchemeType.NSC,
+                SchemeType.KVP,
+                SchemeType.SCSS,
+                SchemeType.MSSC -> base(
+                    schemeType = schemeType,
+                    amountLabel = "Deposit Amount",
+                    amountPlaceholder = "Enter investment amount (e.g. 100000)"
+                )
                 SchemeType.PPF, SchemeType.SSY -> base(
                     schemeType = schemeType,
-                    amountLabel = "Annual deposit",
-                    amountPlaceholder = null
+                    amountLabel = "Yearly Deposit",
+                    amountPlaceholder = "Enter yearly deposit (e.g. 50000)"
                 )
                 SchemeType.SB -> base(
                     schemeType = schemeType,
-                    amountLabel = "Current balance",
-                    amountPlaceholder = null,
+                    amountLabel = "Balance Amount",
+                    amountPlaceholder = "Enter balance amount (e.g. 25000)"
+                )
+                SchemeType.SIMPLE_INTEREST,
+                SchemeType.COMPOUND_INTEREST -> SchemeCalculatorPresentation(
+                    title = schemeType.displayName,
+                    subtitle = null,
+                    amountLabel = "Principal Amount",
+                    amountPlaceholder = "Enter principal amount (e.g. 100000)",
                     fromDateLabel = "From",
                     toDateLabel = "To",
-                    showToDate = true
+                    showDateRange = false,
+                    openingDateDialogTitle = "Select opening date",
+                    installmentsLabel = "Installments"
                 )
-                else -> base(
+                SchemeType.RD_REBATE,
+                SchemeType.PMI -> base(
                     schemeType = schemeType,
-                    amountLabel = "Deposit amount",
-                    amountPlaceholder = null
+                    amountLabel = "Deposit Amount",
+                    amountPlaceholder = "Enter investment amount (e.g. 100000)"
                 )
             }
 
@@ -130,18 +151,18 @@ data class SchemeCalculatorPresentation(
             schemeType: SchemeType,
             amountLabel: String,
             amountPlaceholder: String?,
-            fromDateLabel: String = "Opening Date",
+            fromDateLabel: String = "From",
             toDateLabel: String = "To",
-            showToDate: Boolean = false
+            showDateRange: Boolean = true
         ): SchemeCalculatorPresentation =
             SchemeCalculatorPresentation(
                 title = schemeType.displayName,
-                subtitle = "Estimate returns with saved rate history",
+                subtitle = null,
                 amountLabel = amountLabel,
                 amountPlaceholder = amountPlaceholder,
                 fromDateLabel = fromDateLabel,
                 toDateLabel = toDateLabel,
-                showToDate = showToDate,
+                showDateRange = showDateRange,
                 openingDateDialogTitle = "Select opening date",
                 installmentsLabel = "Installments"
             )
@@ -267,7 +288,7 @@ fun SchemeCalculatorScreen(
                             placeholder = presentation.amountPlaceholder,
                             error = state.errors["amount"]
                         )
-                        if (presentation.showToDate) {
+                        if (presentation.showDateRange) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -281,16 +302,14 @@ fun SchemeCalculatorScreen(
                                     dialogTitle = presentation.openingDateDialogTitle,
                                     modifier = Modifier.weight(1f)
                                 )
+                                val isToDateEditable = state.schemeType == SchemeType.RD || state.schemeType == SchemeType.SB
                                 DateField(
                                     label = presentation.toDateLabel,
-                                    date = if (state.schemeType == SchemeType.RD) {
-                                        state.startDate.plusMonths((state.installmentsPaid.toLongOrNull() ?: 60L).coerceIn(0L, 60L))
-                                    } else {
-                                        state.toDate
-                                    },
+                                    date = calculatorDisplayToDate(state),
                                     minDate = state.startDate,
                                     onDateSelected = onToDateChange,
                                     dialogTitle = "Select finish date",
+                                    enabled = isToDateEditable,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -337,6 +356,31 @@ fun SchemeCalculatorScreen(
         }
     }
 }
+
+internal fun calculatorDisplayToDate(state: SchemeCalculatorUiState): LocalDate =
+    when (state.schemeType) {
+        SchemeType.RD -> state.startDate.plusMonths((state.installmentsPaid.toLongOrNull() ?: 60L).coerceIn(0L, 60L))
+        SchemeType.TD -> state.startDate.plusYears(state.tdTenure.years.toLong())
+        SchemeType.MIS, SchemeType.NSC -> state.startDate.plusYears(5)
+        SchemeType.KVP -> {
+            val rate = (state.activeRatePercent ?: state.officialRate?.ratePercent ?: 0.0) / 100.0
+            if (rate <= 0.0) {
+                state.startDate
+            } else {
+                val months = (ln(2.0) / ln(1.0 + rate) * 12.0).toLong().coerceAtLeast(1)
+                state.startDate.plusMonths(months)
+            }
+        }
+        SchemeType.PPF -> state.startDate.plusYears(15)
+        SchemeType.SSY -> state.startDate.plusYears(21)
+        SchemeType.SCSS -> state.startDate.plusYears(if (state.scssExtended) 8 else 5)
+        SchemeType.SB -> state.toDate
+        SchemeType.MSSC -> state.startDate.plusYears(2)
+        SchemeType.SIMPLE_INTEREST,
+        SchemeType.COMPOUND_INTEREST -> state.startDate.plusMonths(((state.customYears.toDoubleOrNull() ?: 1.0) * 12).toLong())
+        SchemeType.RD_REBATE,
+        SchemeType.PMI -> state.toDate
+    }
 
 @Composable
 private fun SchemeTopBar(title: String, subtitle: String?, onBack: () -> Unit) {
