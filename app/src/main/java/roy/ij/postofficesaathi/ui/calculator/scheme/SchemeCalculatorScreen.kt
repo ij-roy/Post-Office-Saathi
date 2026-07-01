@@ -100,7 +100,7 @@ data class SchemeCalculatorPresentation(
                     title = "RD Calculator",
                     subtitle = null,
                     amountLabel = "Monthly Amount",
-                    amountPlaceholder = "Enter monthly amount (e.g. 5000)",
+                    amountPlaceholder = "Enter monthly amount (e.g. 100)",
                     fromDateLabel = "From",
                     toDateLabel = "To",
                     showDateRange = true,
@@ -115,7 +115,7 @@ data class SchemeCalculatorPresentation(
                 SchemeType.MSSC -> base(
                     schemeType = schemeType,
                     amountLabel = "Deposit Amount",
-                    amountPlaceholder = "Enter investment amount (e.g. 100000)"
+                    amountPlaceholder = "Enter amount (e.g. 1,000)"
                 )
                 SchemeType.PPF, SchemeType.SSY -> base(
                     schemeType = schemeType,
@@ -132,7 +132,7 @@ data class SchemeCalculatorPresentation(
                     title = schemeType.displayName,
                     subtitle = null,
                     amountLabel = "Principal Amount",
-                    amountPlaceholder = "Enter principal amount (e.g. 100000)",
+                    amountPlaceholder = "principal amount (e.g. 100000)",
                     fromDateLabel = "From",
                     toDateLabel = "To",
                     showDateRange = false,
@@ -143,7 +143,7 @@ data class SchemeCalculatorPresentation(
                 SchemeType.PMI -> base(
                     schemeType = schemeType,
                     amountLabel = "Deposit Amount",
-                    amountPlaceholder = "Enter investment amount (e.g. 100000)"
+                    amountPlaceholder = "Enter amount (e.g. 100000)"
                 )
             }
 
