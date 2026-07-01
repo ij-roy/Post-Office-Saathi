@@ -2,6 +2,7 @@ package roy.ij.postofficesaathi.ui.calculator.scheme
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,13 +14,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -44,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,10 +66,76 @@ import roy.ij.postofficesaathi.domain.calculator.SchemeType
 import roy.ij.postofficesaathi.domain.calculator.TDTenure
 import roy.ij.postofficesaathi.domain.calculator.formatCalculatorDate
 import roy.ij.postofficesaathi.ui.components.PagePadding
-import roy.ij.postofficesaathi.ui.components.SaathiCard
 import roy.ij.postofficesaathi.ui.components.SaathiIconButton
 import roy.ij.postofficesaathi.ui.components.SaathiPrimaryButton
 import roy.ij.postofficesaathi.ui.components.SaathiScreen
+
+data class SchemeCalculatorPresentation(
+    val title: String,
+    val subtitle: String?,
+    val amountLabel: String,
+    val amountPlaceholder: String?,
+    val fromDateLabel: String,
+    val toDateLabel: String,
+    val showToDate: Boolean,
+    val openingDateDialogTitle: String,
+    val installmentsLabel: String
+) {
+    companion object {
+        fun forScheme(schemeType: SchemeType): SchemeCalculatorPresentation =
+            when (schemeType) {
+                SchemeType.RD -> SchemeCalculatorPresentation(
+                    title = "RD Calculator",
+                    subtitle = null,
+                    amountLabel = "Monthly Amount",
+                    amountPlaceholder = "Enter monthly amount (e.g. 5000)",
+                    fromDateLabel = "From",
+                    toDateLabel = "To",
+                    showToDate = true,
+                    openingDateDialogTitle = "Select opening date",
+                    installmentsLabel = "Installments"
+                )
+                SchemeType.PPF, SchemeType.SSY -> base(
+                    schemeType = schemeType,
+                    amountLabel = "Annual deposit",
+                    amountPlaceholder = null
+                )
+                SchemeType.SB -> base(
+                    schemeType = schemeType,
+                    amountLabel = "Current balance",
+                    amountPlaceholder = null,
+                    fromDateLabel = "From",
+                    toDateLabel = "To",
+                    showToDate = true
+                )
+                else -> base(
+                    schemeType = schemeType,
+                    amountLabel = "Deposit amount",
+                    amountPlaceholder = null
+                )
+            }
+
+        private fun base(
+            schemeType: SchemeType,
+            amountLabel: String,
+            amountPlaceholder: String?,
+            fromDateLabel: String = "Opening Date",
+            toDateLabel: String = "To",
+            showToDate: Boolean = false
+        ): SchemeCalculatorPresentation =
+            SchemeCalculatorPresentation(
+                title = schemeType.displayName,
+                subtitle = "Estimate returns with saved rate history",
+                amountLabel = amountLabel,
+                amountPlaceholder = amountPlaceholder,
+                fromDateLabel = fromDateLabel,
+                toDateLabel = toDateLabel,
+                showToDate = showToDate,
+                openingDateDialogTitle = "Select opening date",
+                installmentsLabel = "Installments"
+            )
+    }
+}
 
 @Composable
 fun SchemeCalculatorRoute(
@@ -132,78 +205,120 @@ fun SchemeCalculatorScreen(
     onScssExtendedChange: (Boolean) -> Unit,
     onCalculate: () -> Unit
 ) {
+    val presentation = SchemeCalculatorPresentation.forScheme(state.schemeType)
+    val focusManager = LocalFocusManager.current
     SaathiScreen {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    focusManager.clearFocus(force = true)
+                }
                 .padding(PagePadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SchemeTopBar(state.title, onBack)
-            if (state.schemeType == SchemeType.TD) {
-                TdTenureSelector(state.tdTenure, onTdTenureChange)
-            }
-            if (state.schemeType == SchemeType.SIMPLE_INTEREST || state.schemeType == SchemeType.COMPOUND_INTEREST) {
-                CustomTypeSelector(state.customType, onCustomTypeChange)
-            }
-            if (state.schemeType == SchemeType.MSSC) {
-                WarningBanner("MSSC was discontinued on 30 Sept 2023. You can calculate returns for past investments.")
-            }
-            SaathiCard {
-                MoneyField(
-                    value = state.amount,
-                    onValueChange = onAmountChange,
-                    label = when (state.schemeType) {
-                        SchemeType.RD -> "Monthly installment"
-                        SchemeType.PPF, SchemeType.SSY -> "Annual deposit"
-                        SchemeType.SB -> "Current balance"
-                        else -> "Deposit amount"
-                    },
-                    error = state.errors["amount"]
-                )
-                DateField(
-                    label = if (state.schemeType == SchemeType.SB) "From date" else "Start date",
-                    date = state.startDate,
-                    minDate = state.minDate,
-                    onDateSelected = onStartDateChange,
-                    error = state.errors["date"]
-                )
-                if (state.schemeType == SchemeType.SB) {
-                    DateField(
-                        label = "To date",
-                        date = state.toDate,
-                        minDate = state.startDate,
-                        onDateSelected = onToDateChange
+            SchemeTopBar(presentation.title, presentation.subtitle, onBack)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.Center)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (state.schemeType == SchemeType.TD) {
+                        TdTenureSelector(state.tdTenure, onTdTenureChange)
+                    }
+                    if (state.schemeType == SchemeType.SIMPLE_INTEREST || state.schemeType == SchemeType.COMPOUND_INTEREST) {
+                        CustomTypeSelector(state.customType, onCustomTypeChange)
+                    }
+                    if (state.schemeType == SchemeType.MSSC) {
+                        WarningBanner("MSSC was discontinued on 30 Sept 2023. You can calculate returns for past investments.")
+                    }
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        MoneyField(
+                            value = state.amount,
+                            onValueChange = onAmountChange,
+                            label = presentation.amountLabel,
+                            placeholder = presentation.amountPlaceholder,
+                            error = state.errors["amount"]
+                        )
+                        if (presentation.showToDate) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                DateField(
+                                    label = presentation.fromDateLabel,
+                                    date = state.startDate,
+                                    minDate = state.minDate,
+                                    onDateSelected = onStartDateChange,
+                                    error = state.errors["date"],
+                                    dialogTitle = presentation.openingDateDialogTitle,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                DateField(
+                                    label = presentation.toDateLabel,
+                                    date = if (state.schemeType == SchemeType.RD) {
+                                        state.startDate.plusMonths((state.installmentsPaid.toLongOrNull() ?: 60L).coerceIn(0L, 60L))
+                                    } else {
+                                        state.toDate
+                                    },
+                                    minDate = state.startDate,
+                                    onDateSelected = onToDateChange,
+                                    dialogTitle = "Select finish date",
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        } else {
+                            DateField(
+                                label = presentation.fromDateLabel,
+                                date = state.startDate,
+                                minDate = state.minDate,
+                                onDateSelected = onStartDateChange,
+                                error = state.errors["date"],
+                                dialogTitle = presentation.openingDateDialogTitle
+                            )
+                        }
+                        RateSection(
+                            state = state,
+                            onEnableRateOverride = onEnableRateOverride,
+                            onRateOverrideChange = onRateOverrideChange,
+                            onResetRateOverride = onResetRateOverride
+                        )
+                        SchemeSpecificFields(
+                            state = state,
+                            onInstallmentsPaidChange = onInstallmentsPaidChange,
+                            onYearsCompletedChange = onYearsCompletedChange,
+                            onCustomYearsChange = onCustomYearsChange,
+                            onCompoundFrequencyChange = onCompoundFrequencyChange,
+                            onScssExtendedChange = onScssExtendedChange
+                        )
+                    }
+                    SaathiPrimaryButton(
+                        text = if (state.isCalculating) "Calculating..." else "Calculate",
+                        enabled = !state.isCalculating && !state.isLoading,
+                        onClick = onCalculate
                     )
+                    Spacer(Modifier.height(24.dp))
                 }
-                RateSection(
-                    state = state,
-                    onEnableRateOverride = onEnableRateOverride,
-                    onRateOverrideChange = onRateOverrideChange,
-                    onResetRateOverride = onResetRateOverride
-                )
-                SchemeSpecificFields(
-                    state = state,
-                    onInstallmentsPaidChange = onInstallmentsPaidChange,
-                    onYearsCompletedChange = onYearsCompletedChange,
-                    onCustomYearsChange = onCustomYearsChange,
-                    onCompoundFrequencyChange = onCompoundFrequencyChange,
-                    onScssExtendedChange = onScssExtendedChange
-                )
             }
-            SaathiPrimaryButton(
-                text = if (state.isCalculating) "Calculating..." else "Calculate",
-                enabled = !state.isCalculating && !state.isLoading,
-                onClick = onCalculate
-            )
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun SchemeTopBar(title: String, onBack: () -> Unit) {
+private fun SchemeTopBar(title: String, subtitle: String?, onBack: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -216,11 +331,13 @@ private fun SchemeTopBar(title: String, onBack: () -> Unit) {
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.headlineLarge)
-            Text(
-                "Estimate returns with saved rate history",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            subtitle?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -265,18 +382,36 @@ private fun ChipRow(content: @Composable RowScope.() -> Unit) {
 }
 
 @Composable
-private fun MoneyField(value: String, onValueChange: (String) -> Unit, label: String, error: String?) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(label) },
-        prefix = { Text("₹") },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        isError = error != null,
-        supportingText = { error?.let { Text(it) } }
-    )
+private fun MoneyField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String?,
+    error: String?
+) {
+    val focusManager = LocalFocusManager.current
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { placeholder?.let { Text(it) } },
+            prefix = { Text("₹") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(force = true) }),
+            isError = error != null,
+            supportingText = { error?.let { Text(it) } }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -286,13 +421,16 @@ private fun DateField(
     date: LocalDate,
     minDate: LocalDate?,
     onDateSelected: (LocalDate) -> Unit,
-    error: String? = null
+    error: String? = null,
+    dialogTitle: String = "Select date",
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clickable { showDialog = true },
+            .clickable(enabled = enabled) { showDialog = true },
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = if (error == null) 0.34f else 0.9f))
@@ -302,7 +440,12 @@ private fun DateField(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Icon(
+                Icons.Filled.CalendarMonth,
+                contentDescription = null,
+                modifier = Modifier.size(38.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(formatCalculatorDate(date), style = MaterialTheme.typography.titleMedium)
@@ -315,6 +458,7 @@ private fun DateField(
         val minMillis = minDate?.atStartOfDay(zoneId)?.toInstant()?.toEpochMilli()
         val pickerState = rememberDatePickerState(
             initialSelectedDateMillis = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+            yearRange = (minDate?.year ?: 1900)..(LocalDate.now().year + 80),
             selectableDates = object : SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean =
                     minMillis == null || utcTimeMillis >= minMillis
@@ -334,7 +478,15 @@ private fun DateField(
             },
             dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } }
         ) {
-            DatePicker(state = pickerState)
+            DatePicker(
+                state = pickerState,
+                title = {
+                    Text(
+                        dialogTitle,
+                        modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp)
+                    )
+                }
+            )
         }
     }
 }
@@ -346,6 +498,7 @@ private fun RateSection(
     onRateOverrideChange: (String) -> Unit,
     onResetRateOverride: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
     if (state.isRateOverridden) {
         OutlinedTextField(
             value = state.rateOverride,
@@ -354,7 +507,11 @@ private fun RateSection(
             label = { Text("Interest rate") },
             suffix = { Text("%") },
             singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(force = true) }),
             trailingIcon = {
                 if (state.officialRate != null) {
                     IconButton(onClick = onResetRateOverride) {
@@ -374,29 +531,33 @@ private fun RateSection(
             isError = state.errors["rate"] != null
         )
     } else {
-        Surface(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onEnableRateOverride() },
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
+                .clickable { onEnableRateOverride() }
+                .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                val rate = state.officialRate
-                Text(
-                    text = if (rate == null) "Loading official rate..." else "Rate: ${rate.ratePercent}% p.a. (${rate.compoundingFrequency.label})",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = if (rate == null) {
-                        "Tap to enter a custom rate."
-                    } else {
-                        "Effective from ${formatCalculatorDate(rate.effectiveFrom)}. Tap to override."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            val rate = state.officialRate
+            Text(
+                text = if (rate == null) "Loading rate" else "Rate: ${rate.ratePercent}%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.weight(1f))
+            rate?.let {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                    contentColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Text(
+                        text = it.compoundingFrequency.label,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         }
     }
@@ -411,17 +572,13 @@ private fun SchemeSpecificFields(
     onCompoundFrequencyChange: (CompoundFrequencyOption) -> Unit,
     onScssExtendedChange: (Boolean) -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
     when (state.schemeType) {
         SchemeType.RD -> {
-            OutlinedTextField(
+            InstallmentsField(
                 value = state.installmentsPaid,
                 onValueChange = onInstallmentsPaidChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Installments paid so far") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = state.errors["installments"] != null,
-                supportingText = { Text(state.errors["installments"] ?: "Total installments: 60 months") }
+                error = state.errors["installments"]
             )
         }
         SchemeType.PPF, SchemeType.SSY -> {
@@ -431,7 +588,8 @@ private fun SchemeSpecificFields(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Years completed so far") },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(force = true) })
             )
         }
         SchemeType.SCSS -> {
@@ -454,7 +612,8 @@ private fun SchemeSpecificFields(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Time in years") },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(force = true) }),
                 isError = state.errors["years"] != null,
                 supportingText = { state.errors["years"]?.let { Text(it) } }
             )
@@ -472,6 +631,50 @@ private fun SchemeSpecificFields(
             }
         }
         else -> Unit
+    }
+}
+
+@Composable
+private fun InstallmentsField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    error: String?
+) {
+    val focusManager = LocalFocusManager.current
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Installments :",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            BasicTextField(
+                value = value.ifBlank { "60" },
+                onValueChange = onValueChange,
+                textStyle = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(force = true) })
+            )
+            Icon(
+                imageVector = Icons.Filled.Edit,
+                contentDescription = "Edit installments",
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        error?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
     }
 }
 

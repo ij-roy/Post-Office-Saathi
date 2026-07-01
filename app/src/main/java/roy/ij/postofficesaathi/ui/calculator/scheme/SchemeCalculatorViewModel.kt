@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,7 +128,14 @@ class SchemeCalculatorViewModel(
     }
 
     fun updateToDate(date: LocalDate) {
-        _uiState.update { it.copy(toDate = date) }
+        _uiState.update {
+            if (it.schemeType == SchemeType.RD) {
+                val months = ChronoUnit.MONTHS.between(it.startDate, date).toInt().coerceIn(0, 60)
+                it.copy(toDate = date, installmentsPaid = months.toString(), errors = it.errors - FieldInstallments)
+            } else {
+                it.copy(toDate = date)
+            }
+        }
     }
 
     fun updateTdTenure(tenure: TDTenure) {
@@ -324,4 +332,3 @@ class SchemeCalculatorViewModel(
         const val FieldYears = "years"
     }
 }
-
