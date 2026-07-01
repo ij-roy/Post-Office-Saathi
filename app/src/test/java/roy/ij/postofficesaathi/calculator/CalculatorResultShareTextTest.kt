@@ -10,6 +10,7 @@ import roy.ij.postofficesaathi.domain.calculator.CompoundingFrequency
 import roy.ij.postofficesaathi.domain.calculator.InterestEngine
 import roy.ij.postofficesaathi.domain.calculator.SchemeType
 import roy.ij.postofficesaathi.domain.calculator.TDTenure
+import roy.ij.postofficesaathi.ui.calculator.scheme.formatResultCurrency
 import roy.ij.postofficesaathi.ui.calculator.toShareText
 
 class CalculatorResultShareTextTest {
@@ -74,6 +75,29 @@ class CalculatorResultShareTextTest {
 
         assertTrue(text.contains("Monthly payout:"))
         assertTrue(text.contains("Total interest:"))
+        assertTrue(text.contains("Principal returned:"))
+        assertTrue(text.contains("Total received:"))
+        assertTrue(text.contains("Term: 5 years"))
+    }
+
+    @Test
+    fun seniorCitizenSavingsShareTextExplainsQuarterlyPayoutAndTotalReceived() {
+        val result = InterestEngine.calculate(
+            CalculatorInput(
+                schemeType = SchemeType.SCSS,
+                amount = 100_000.0,
+                startDate = LocalDate.parse("2026-04-01"),
+                ratePercent = 8.2,
+                compoundingFrequency = CompoundingFrequency.QUARTERLY
+            )
+        )
+
+        val text = result.toShareText()
+
+        assertTrue(text.contains("Quarterly payout:"))
+        assertTrue(text.contains("Total interest:"))
+        assertTrue(text.contains("Principal returned:"))
+        assertTrue(text.contains("Total received:"))
         assertTrue(text.contains("Term: 5 years"))
     }
 
@@ -94,5 +118,11 @@ class CalculatorResultShareTextTest {
 
         assertTrue(text.contains("Tenure: 3 Years"))
         assertTrue(text.contains("Investment:"))
+    }
+
+    @Test
+    fun resultScreenCurrencyKeepsTwoDecimalPlacesForAccuracy() {
+        assertTrue(formatResultCurrency(7_136.58).contains(".58"))
+        assertTrue(formatResultCurrency(100_000.0).endsWith(".00"))
     }
 }

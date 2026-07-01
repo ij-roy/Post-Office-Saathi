@@ -52,6 +52,8 @@ private fun CalculatorResult.shareRows(): List<Pair<String, String>> {
             "Term" to "5 years",
             "Monthly payout" to formatIndianCurrency(monthlyIncome ?: 0.0),
             "Total interest" to formatIndianCurrency(interestEarned),
+            "Principal returned" to formatIndianCurrency(maturityAmount),
+            "Total received" to formatIndianCurrency(totalReceived),
             "Maturity date" to formatCalculatorDate(maturityDate)
         )
         SchemeType.SCSS -> listOf(
@@ -60,6 +62,8 @@ private fun CalculatorResult.shareRows(): List<Pair<String, String>> {
             "Term" to if (input.scssExtended) "8 years" else "5 years",
             "Quarterly payout" to formatIndianCurrency(monthlyIncome ?: 0.0),
             "Total interest" to formatIndianCurrency(interestEarned),
+            "Principal returned" to formatIndianCurrency(maturityAmount),
+            "Total received" to formatIndianCurrency(totalReceived),
             "Maturity date" to formatCalculatorDate(maturityDate)
         )
         SchemeType.TD -> investmentRows("Investment", input.tdTenure.label)

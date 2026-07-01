@@ -36,11 +36,11 @@ import androidx.compose.ui.unit.dp
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
-import kotlin.math.abs
 import roy.ij.postofficesaathi.R
 import roy.ij.postofficesaathi.domain.calculator.CalculatorResult
 import roy.ij.postofficesaathi.domain.calculator.SchemeType
 import roy.ij.postofficesaathi.domain.calculator.formatCalculatorDate
+import roy.ij.postofficesaathi.domain.calculator.formatIndianCurrency
 import roy.ij.postofficesaathi.ui.components.PagePadding
 import roy.ij.postofficesaathi.ui.components.SaathiCard
 import roy.ij.postofficesaathi.ui.components.SaathiIconButton
@@ -146,7 +146,7 @@ private fun HeroResultCard(result: CalculatorResult) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    formatRoundedIndianCurrency(hero.value),
+                    formatResultCurrency(hero.value),
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.ExtraBold
@@ -439,7 +439,7 @@ private fun ContinuationCard(result: CalculatorResult) {
         result.continuationProjections.values.forEach { projection ->
             CompactResultRow(
                 label = "${projection.year} years",
-                value = formatRoundedIndianCurrency(projection.withDeposits)
+                value = formatResultCurrency(projection.withDeposits)
             )
         }
         Text(
@@ -457,7 +457,7 @@ private fun YearWiseInterestCard(result: CalculatorResult) {
         result.fyWiseBreakdown.take(8).forEach { row ->
             CompactResultRow(
                 label = "FY ${row.financialYear}",
-                value = formatRoundedIndianCurrency(row.interestAccrued),
+                value = formatResultCurrency(row.interestAccrued),
                 valueColor = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -509,20 +509,22 @@ private fun CalculatorResult.heroMetric(): ResultMetric =
 private fun CalculatorResult.summaryRows(): List<ResultDisplayRow> =
     when (schemeType) {
         SchemeType.MIS -> listOf(
-            ResultDisplayRow("Investment", formatRoundedIndianCurrency(totalDeposited)),
-            ResultDisplayRow("Total interest", formatRoundedIndianCurrency(interestEarned), emphasize = true),
-            ResultDisplayRow("Principal at maturity", formatRoundedIndianCurrency(maturityAmount)),
+            ResultDisplayRow("Investment", formatResultCurrency(totalDeposited)),
+            ResultDisplayRow("Total interest", formatResultCurrency(interestEarned), emphasize = true),
+            ResultDisplayRow("Principal at maturity", formatResultCurrency(maturityAmount)),
+            ResultDisplayRow("Total received", formatResultCurrency(totalReceived)),
             ResultDisplayRow("Maturity date", formatCalculatorDate(maturityDate))
         )
         SchemeType.SCSS -> listOf(
-            ResultDisplayRow("Investment", formatRoundedIndianCurrency(totalDeposited)),
-            ResultDisplayRow("Total interest", formatRoundedIndianCurrency(interestEarned), emphasize = true),
-            ResultDisplayRow("Principal at maturity", formatRoundedIndianCurrency(maturityAmount)),
+            ResultDisplayRow("Investment", formatResultCurrency(totalDeposited)),
+            ResultDisplayRow("Total interest", formatResultCurrency(interestEarned), emphasize = true),
+            ResultDisplayRow("Principal at maturity", formatResultCurrency(maturityAmount)),
+            ResultDisplayRow("Total received", formatResultCurrency(totalReceived)),
             ResultDisplayRow("Maturity date", formatCalculatorDate(maturityDate))
         )
         else -> listOf(
-            ResultDisplayRow("Deposited", formatRoundedIndianCurrency(totalDeposited)),
-            ResultDisplayRow("Interest earned", formatRoundedIndianCurrency(interestEarned), emphasize = true),
+            ResultDisplayRow("Deposited", formatResultCurrency(totalDeposited)),
+            ResultDisplayRow("Interest earned", formatResultCurrency(interestEarned), emphasize = true),
             ResultDisplayRow("Maturity date", formatCalculatorDate(maturityDate))
         )
     }
@@ -533,7 +535,7 @@ private fun CalculatorResult.contextDisplay(): ResultContextDisplay {
     val opening = ResultDisplayRow("Opening date", input.startDate.formatIfAvailable())
     return when (schemeType) {
         SchemeType.RD -> ResultContextDisplay(
-            primary = ResultDisplayRow("Monthly amount", formatRoundedIndianCurrency(input.amount)),
+            primary = ResultDisplayRow("Monthly amount", formatResultCurrency(input.amount)),
             supporting = listOf(
                 ResultDisplayRow("Installments", input.installmentsPaid.toString()),
                 ResultDisplayRow("From", input.startDate.formatIfAvailable()),
@@ -546,31 +548,31 @@ private fun CalculatorResult.contextDisplay(): ResultContextDisplay {
         SchemeType.KVP -> investmentContextRows("Investment", "Estimated doubling term", opening, rate)
         SchemeType.MSSC -> investmentContextRows("Investment", "2 years", opening, rate)
         SchemeType.MIS -> ResultContextDisplay(
-            primary = ResultDisplayRow("Investment", formatRoundedIndianCurrency(input.amount)),
+            primary = ResultDisplayRow("Investment", formatResultCurrency(input.amount)),
             supporting = listOf(
-                ResultDisplayRow("Monthly payout", formatRoundedIndianCurrency(monthlyIncome ?: 0.0)),
+                ResultDisplayRow("Monthly payout", formatResultCurrency(monthlyIncome ?: 0.0)),
                 ResultDisplayRow("Term", "5 years"),
-                ResultDisplayRow("Total interest", formatRoundedIndianCurrency(interestEarned)),
+                ResultDisplayRow("Total interest", formatResultCurrency(interestEarned)),
                 rate
             )
         )
         SchemeType.PPF -> yearlyDepositContextRows("Yearly deposit", "15 years", opening, rate)
         SchemeType.SSY -> yearlyDepositContextRows("Yearly deposit", "21 years", opening, rate)
         SchemeType.SCSS -> ResultContextDisplay(
-            primary = ResultDisplayRow("Investment", formatRoundedIndianCurrency(input.amount)),
+            primary = ResultDisplayRow("Investment", formatResultCurrency(input.amount)),
             supporting = listOf(
-                ResultDisplayRow("Quarterly payout", formatRoundedIndianCurrency(monthlyIncome ?: 0.0)),
+                ResultDisplayRow("Quarterly payout", formatResultCurrency(monthlyIncome ?: 0.0)),
                 ResultDisplayRow("Term", if (input.scssExtended) "8 years" else "5 years"),
                 ResultDisplayRow("Maturity date", formatCalculatorDate(maturityDate)),
                 rate
             )
         )
         SchemeType.SB -> ResultContextDisplay(
-            primary = ResultDisplayRow("Balance", formatRoundedIndianCurrency(input.amount)),
+            primary = ResultDisplayRow("Balance", formatResultCurrency(input.amount)),
             supporting = listOf(
                 ResultDisplayRow("From", input.startDate.formatIfAvailable()),
                 ResultDisplayRow("To", (input.toDate ?: maturityDate).formatIfAvailable()),
-                ResultDisplayRow("Interest earned", formatRoundedIndianCurrency(interestEarned)),
+                ResultDisplayRow("Interest earned", formatResultCurrency(interestEarned)),
                 rate
             )
         )
@@ -578,10 +580,10 @@ private fun CalculatorResult.contextDisplay(): ResultContextDisplay {
         SchemeType.PMI -> customContextRows("Simple interest", rate)
         SchemeType.COMPOUND_INTEREST -> customContextRows("Compound interest", rate)
         SchemeType.RD_REBATE -> ResultContextDisplay(
-            primary = ResultDisplayRow("Installment amount", formatRoundedIndianCurrency(input.amount)),
+            primary = ResultDisplayRow("Installment amount", formatResultCurrency(input.amount)),
             supporting = listOf(
                 ResultDisplayRow("Installments", input.installmentsPaid.toString()),
-                ResultDisplayRow("Rebate estimate", formatRoundedIndianCurrency(interestEarned)),
+                ResultDisplayRow("Rebate estimate", formatResultCurrency(interestEarned)),
                 rate
             )
         )
@@ -595,7 +597,7 @@ private fun CalculatorResult.investmentContextRows(
     rate: ResultDisplayRow
 ): ResultContextDisplay =
     ResultContextDisplay(
-        primary = ResultDisplayRow(amountLabel, formatRoundedIndianCurrency(inputSummary.amount)),
+        primary = ResultDisplayRow(amountLabel, formatResultCurrency(inputSummary.amount)),
         supporting = listOf(
             ResultDisplayRow("Tenure", tenure),
             opening,
@@ -611,7 +613,7 @@ private fun CalculatorResult.yearlyDepositContextRows(
     rate: ResultDisplayRow
 ): ResultContextDisplay =
     ResultContextDisplay(
-        primary = ResultDisplayRow(amountLabel, formatRoundedIndianCurrency(inputSummary.amount)),
+        primary = ResultDisplayRow(amountLabel, formatResultCurrency(inputSummary.amount)),
         supporting = listOf(
             ResultDisplayRow("Term", term),
             opening,
@@ -622,7 +624,7 @@ private fun CalculatorResult.yearlyDepositContextRows(
 
 private fun CalculatorResult.customContextRows(mode: String, rate: ResultDisplayRow): ResultContextDisplay =
     ResultContextDisplay(
-        primary = ResultDisplayRow("Principal", formatRoundedIndianCurrency(inputSummary.amount)),
+        primary = ResultDisplayRow("Principal", formatResultCurrency(inputSummary.amount)),
         supporting = listOf(
             ResultDisplayRow("Time period", "${inputSummary.customYears.formatRate()} years"),
             ResultDisplayRow("Mode", mode),
@@ -635,22 +637,7 @@ private val WhatsAppGreen = Color(0xFF25D366)
 private fun Double.formatRate(): String =
     BigDecimal(this).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
 
-private fun formatRoundedIndianCurrency(value: Double): String {
-    val rounded = BigDecimal(value).setScale(0, RoundingMode.HALF_UP).abs()
-    val whole = rounded.toPlainString()
-    val grouped = if (whole.length <= 3) {
-        whole
-    } else {
-        val lastThree = whole.takeLast(3)
-        val prefix = whole.dropLast(3)
-        prefix.reversed()
-            .chunked(2)
-            .joinToString(",")
-            .reversed() + "," + lastThree
-    }
-    val sign = if (value < 0 && abs(value) >= 0.5) "-" else ""
-    return "$sign\u20B9$grouped"
-}
+internal fun formatResultCurrency(value: Double): String = formatIndianCurrency(value)
 
 private fun LocalDate.formatIfAvailable(): String =
     if (this == LocalDate.MIN) "-" else formatCalculatorDate(this)

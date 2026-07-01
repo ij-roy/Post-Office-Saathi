@@ -27,11 +27,7 @@ object InterestEngine {
         val months = 60
         val monthlyInstallment = input.amount
         val paidMonths = input.installmentsPaid.coerceIn(0, months)
-        val monthlyRate = input.ratePercent / 100.0 / 12.0
-        var corpus = 0.0
-        repeat(paidMonths) {
-            corpus = (corpus + monthlyInstallment) * (1 + monthlyRate)
-        }
+        val corpus = rdMaturity(monthlyInstallment, input.ratePercent, paidMonths)
         val deposited = monthlyInstallment * paidMonths
         val result = baseResult(
             input = input,
@@ -51,11 +47,12 @@ object InterestEngine {
     }
 
     private fun timeDeposit(input: CalculatorInput): CalculatorResult =
-        fixedCompound(
+        baseResult(
             input = input,
-            years = input.tdTenure.years,
-            periodsPerYear = 4,
-            title = "Time Deposit ${input.tdTenure.label}"
+            title = "Time Deposit ${input.tdTenure.label}",
+            totalDeposited = input.amount,
+            maturityAmount = timeDepositMaturity(input.amount, input.ratePercent, input.tdTenure.years),
+            maturityDate = input.startDate.plusYears(input.tdTenure.years.toLong())
         )
 
     private fun monthlyIncome(input: CalculatorInput): CalculatorResult {
@@ -69,6 +66,7 @@ object InterestEngine {
             maturityDate = input.startDate.plusYears(5),
             monthlyIncome = roundMoney(monthlyIncome),
             interestEarnedOverride = totalInterest,
+            totalReceivedOverride = input.amount + totalInterest,
             notes = listOf("Monthly income is shown before tax.")
         )
     }
@@ -130,6 +128,7 @@ object InterestEngine {
             maturityDate = input.startDate.plusYears(years.toLong()),
             monthlyIncome = roundMoney(quarterlyPayout),
             interestEarnedOverride = interest,
+            totalReceivedOverride = input.amount + interest,
             notes = listOf("SCSS interest is shown as quarterly payout.")
         )
     }
@@ -214,10 +213,12 @@ object InterestEngine {
         maturityDate: LocalDate,
         monthlyIncome: Double? = null,
         interestEarnedOverride: Double? = null,
+        totalReceivedOverride: Double? = null,
         notes: List<String> = emptyList()
     ): CalculatorResult {
         val interestEarned = interestEarnedOverride ?: (maturityAmount - totalDeposited)
         val roundedInterest = roundMoney(interestEarned)
+        val roundedMaturity = roundMoney(maturityAmount)
         return CalculatorResult(
             schemeType = input.schemeType,
             title = title,
@@ -225,7 +226,8 @@ object InterestEngine {
             rateLabel = "${input.ratePercent}% p.a.",
             totalDeposited = roundMoney(totalDeposited),
             interestEarned = roundedInterest,
-            maturityAmount = roundMoney(maturityAmount),
+            maturityAmount = roundedMaturity,
+            totalReceived = roundMoney(totalReceivedOverride ?: roundedMaturity),
             maturityDate = maturityDate,
             monthlyIncome = monthlyIncome,
             fyWiseBreakdown = fyRows(input.startDate, maturityDate, roundedInterest),
@@ -248,6 +250,22 @@ object InterestEngine {
             compoundingFrequency = compoundingFrequency,
             scssExtended = scssExtended
         )
+
+    private fun rdMaturity(monthlyDeposit: Double, annualRatePercent: Double, months: Int): Double {
+        if (months <= 0 || monthlyDeposit <= 0.0) return 0.0
+        val quarterlyRate = annualRatePercent / 400.0
+        val quarters = months / 3.0
+        return monthlyDeposit * ((1 + quarterlyRate).pow(quarters) - 1) / (1 - (1 + quarterlyRate).pow(-1.0 / 3.0))
+    }
+
+    private fun timeDepositAnnualInterest(principal: Double, annualRatePercent: Double): Double {
+        if (principal <= 0.0) return 0.0
+        val quarterlyRate = annualRatePercent / 400.0
+        return principal * ((1 + quarterlyRate).pow(4) - 1)
+    }
+
+    private fun timeDepositMaturity(principal: Double, annualRatePercent: Double, years: Int): Double =
+        principal + timeDepositAnnualInterest(principal, annualRatePercent) * years
 
     private fun continuationProjections(
         currentCorpus: Double,

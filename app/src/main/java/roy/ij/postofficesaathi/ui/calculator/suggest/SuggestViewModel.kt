@@ -90,7 +90,7 @@ class SuggestViewModel(
                     PlanSuggestionUi(
                         schemeType = scheme,
                         title = if (scheme == SchemeType.TD) "Time Deposit 5 Years" else scheme.displayName,
-                        maturityAmount = result.maturityAmount,
+                        maturityAmount = result.totalReceived,
                         ratePercent = lookup.ratePercent,
                         result = result
                     )
@@ -170,4 +170,3 @@ class SuggestViewModel(
             ) as T
     }
 }
-

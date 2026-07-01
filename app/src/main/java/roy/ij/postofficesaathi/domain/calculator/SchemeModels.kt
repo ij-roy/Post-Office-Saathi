@@ -139,6 +139,7 @@ data class CalculatorResult(
     val totalDeposited: Double,
     val interestEarned: Double,
     val maturityAmount: Double,
+    val totalReceived: Double = maturityAmount,
     val maturityDate: LocalDate,
     val monthlyIncome: Double? = null,
     val fyWiseBreakdown: List<FYInterestRow> = emptyList(),
