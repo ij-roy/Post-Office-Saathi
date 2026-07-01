@@ -107,16 +107,19 @@ fun CalculatorHomeScreen(
                     }
                 }
             }
-            ExtendedFloatingActionButton(
-                onClick = onSuggestPlans,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(20.dp),
-                icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
-                text = { Text("Suggest Plans") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+            val showSuggestPlansFab = false // Set to true to show the Floating Action Button (FAB)
+            if (showSuggestPlansFab) {
+                ExtendedFloatingActionButton(
+                    onClick = onSuggestPlans,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(20.dp),
+                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
+                    text = { Text("Suggest Plans") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     }
 }
