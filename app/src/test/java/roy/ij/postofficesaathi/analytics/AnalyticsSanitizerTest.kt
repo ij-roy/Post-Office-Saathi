@@ -54,4 +54,20 @@ class AnalyticsSanitizerTest {
         assertEquals("1_5m", AnalyticsSanitizer.durationBucket(120_000))
         assertEquals("5m_plus", AnalyticsSanitizer.durationBucket(360_000))
     }
+
+    @Test
+    fun amountBucketGroupsFinancialValuesWithoutRawAmount() {
+        assertEquals("under_1k", AnalyticsSanitizer.amountBucket(500.0))
+        assertEquals("1k_10k", AnalyticsSanitizer.amountBucket(5_000.0))
+        assertEquals("10k_1l", AnalyticsSanitizer.amountBucket(50_000.0))
+        assertEquals("1l_5l", AnalyticsSanitizer.amountBucket(250_000.0))
+        assertEquals("5l_plus", AnalyticsSanitizer.amountBucket(500_000.0))
+    }
+
+    @Test
+    fun pincodePrefixMasksLastThreeDigits() {
+        assertEquals("125XXX", AnalyticsSanitizer.pincodePrefix("125055"))
+        assertEquals("12XXXX", AnalyticsSanitizer.pincodePrefix("12"))
+        assertEquals("XXXXXX", AnalyticsSanitizer.pincodePrefix(""))
+    }
 }

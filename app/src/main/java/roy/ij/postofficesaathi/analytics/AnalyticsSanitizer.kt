@@ -47,6 +47,29 @@ object AnalyticsSanitizer {
             else -> "5m_plus"
         }
 
+    fun amountBucket(amount: Double): String =
+        when {
+            amount < 1_000 -> "under_1k"
+            amount < 10_000 -> "1k_10k"
+            amount < 100_000 -> "10k_1l"
+            amount < 500_000 -> "1l_5l"
+            else -> "5l_plus"
+        }
+
+    fun tenureBucket(years: Double): String =
+        when {
+            years < 1.0 -> "under_1y"
+            years < 3.0 -> "1_3y"
+            years < 5.0 -> "3_5y"
+            years < 10.0 -> "5_10y"
+            else -> "10y_plus"
+        }
+
+    fun pincodePrefix(pincode: String): String {
+        val digits = pincode.filter(Char::isDigit).take(3)
+        return digits.padEnd(3, 'X') + "XXX"
+    }
+
     private fun String.truncateAtWordBoundary(maxLength: Int): String {
         if (length <= maxLength) return this
         val candidate = take(maxLength).trim()

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "agent_dummy",
+    "name": "Demo Agent",
+    "area": "Sample Area",
+    "district": "Sample District",
+    "state": "West Bengal",
+    "pincode": "700001",
+    "phone": "9000000000",
+    "photoUrl": ""
+  }
+]

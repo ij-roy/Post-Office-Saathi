@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,12 +32,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import roy.ij.postofficesaathi.data.recent.RecentWorkItem
 import roy.ij.postofficesaathi.data.recent.RecentWorkType
 import roy.ij.postofficesaathi.ui.components.HomeFormsIllustration
+import roy.ij.postofficesaathi.ui.components.HomeCalculatorIllustration
 import roy.ij.postofficesaathi.ui.components.HomePdfIllustration
 import roy.ij.postofficesaathi.ui.components.PagePadding
 import roy.ij.postofficesaathi.ui.components.SaathiCard
@@ -47,6 +52,8 @@ fun HomeScreen(
     state: HomeUiState,
     onOpenForms: () -> Unit,
     onCreatePdf: () -> Unit,
+    onOpenCalculator: () -> Unit,
+    onSuggestPlans: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenRecent: (RecentWorkItem) -> Unit,
     onShareRecent: (RecentWorkItem) -> Unit
@@ -56,52 +63,66 @@ fun HomeScreen(
 
     SaathiScreen {
         Box(Modifier.fillMaxSize()) {
-            Column(
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+                    .fillMaxSize()
                     .padding(top = headerHeight)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = PagePadding)
-                        .padding(top = 54.dp, bottom = 22.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillParentMaxHeight(fraction = 0.88f)
+                            .padding(horizontal = PagePadding),
+                        contentAlignment = Alignment.Center
                     ) {
-                        HomeActionCard(
-                            title = "Download Forms",
-                            visual = HomeVisual.Forms,
-                            modifier = Modifier.weight(1f),
-                            onClick = onOpenForms
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                HomeActionCard(
+                                    title = "Download\nForms",
+                                    visual = HomeVisual.Forms,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = onOpenForms
+                                )
 
-                        HomeActionCard(
-                            title = "Create PDF",
-                            visual = HomeVisual.Pdf,
-                            modifier = Modifier.weight(1f),
-                            onClick = onCreatePdf
-                        )
+                                HomeActionCard(
+                                    title = "Create\nPDF",
+                                    visual = HomeVisual.Pdf,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = onCreatePdf
+                                )
+                            }
+                            HomeActionCard(
+                                title = "Interest Calculator",
+                                visual = HomeVisual.Calculator,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = onOpenCalculator
+                            )
+                        }
                     }
                 }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = PagePadding)
-                        .padding(bottom = 32.dp)
-                ) {
-                    RecentWorkPanel(
-                        items = state.recentItems,
-                        onOpen = onOpenRecent,
-                        onShare = onShareRecent
-                    )
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = PagePadding)
+                            .padding(bottom = 24.dp)
+                    ) {
+                        RecentWorkPanel(
+                            items = state.recentItems,
+                            onOpen = onOpenRecent,
+                            onShare = onShareRecent
+                        )
+                    }
                 }
             }
 
@@ -132,6 +153,19 @@ fun HomeScreen(
                         onClick = onOpenSettings
                     )
                 }
+            }
+            val showSuggestPlansFab = false // Set to true to show the Floating Action Button (FAB)
+            if (showSuggestPlansFab) {
+                ExtendedFloatingActionButton(
+                    onClick = onSuggestPlans,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(20.dp),
+                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
+                    text = { Text("Suggest Plans") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     }
@@ -240,28 +274,30 @@ private fun HomeActionCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 244.dp)
+                .heightIn(min = 210.dp)
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(142.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.24f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                    .height(130.dp)
             ) {
                 when (visual) {
                     HomeVisual.Forms -> HomeFormsIllustration(Modifier.fillMaxSize())
                     HomeVisual.Pdf -> HomePdfIllustration(Modifier.fillMaxSize())
+                    HomeVisual.Calculator -> HomeCalculatorIllustration(Modifier.fillMaxSize())
                 }
             }
             Text(
                 text = title,
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp
+                ),
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -272,5 +308,6 @@ private fun HomeActionCard(
 
 private enum class HomeVisual {
     Forms,
-    Pdf
+    Pdf,
+    Calculator
 }

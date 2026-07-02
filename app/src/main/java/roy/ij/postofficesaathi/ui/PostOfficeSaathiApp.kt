@@ -30,14 +30,23 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import roy.ij.postofficesaathi.analytics.AnalyticsEvent
 import roy.ij.postofficesaathi.analytics.AnalyticsFlow
 import roy.ij.postofficesaathi.analytics.AnalyticsParam
 import roy.ij.postofficesaathi.analytics.AnalyticsScreen
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
+import roy.ij.postofficesaathi.domain.calculator.SchemeType
+import roy.ij.postofficesaathi.ui.calculator.CalculatorFlowViewModel
+import roy.ij.postofficesaathi.ui.calculator.CalculatorHomeRoute
+import roy.ij.postofficesaathi.ui.calculator.CalculatorPlaceholderScreen
+import roy.ij.postofficesaathi.ui.calculator.scheme.CalculatorResultScreen
+import roy.ij.postofficesaathi.ui.calculator.scheme.SchemeCalculatorRoute
+import roy.ij.postofficesaathi.ui.calculator.suggest.SuggestBottomSheet
 import roy.ij.postofficesaathi.ui.forms.FormsRoute
 import roy.ij.postofficesaathi.ui.home.HomeExternalAction
 import roy.ij.postofficesaathi.ui.home.HomeScreen
@@ -65,6 +74,11 @@ private object Routes {
     const val Settings = "settings"
     const val Help = "help"
     const val Privacy = "privacy"
+    const val Calculator = "calculator"
+    const val SchemeCalculator = "calculator/scheme/{schemeType}?amount={amount}"
+    const val CalculatorResult = "calculator/result"
+    const val AgentDirectory = "calculator/agents"
+    const val PlanResult = "calculator/plan-result"
     const val PdfLayout = "pdf-layout"
     const val Capture = "capture"
     const val Preview = "preview"
@@ -86,11 +100,14 @@ fun PostOfficeSaathiApp(
     val pdfFlowFactory = remember(context, analytics) { PdfFlowViewModel.Factory(context, analytics) }
     val pdfFlowViewModel: PdfFlowViewModel = viewModel(key = "pdf-flow", factory = pdfFlowFactory)
     val pdfState by pdfFlowViewModel.uiState.collectAsStateWithLifecycle()
+    val calculatorFlowViewModel: CalculatorFlowViewModel = viewModel(key = "calculator-flow")
+    val calculatorResult by calculatorFlowViewModel.latestResult.collectAsStateWithLifecycle()
     val homeFactory = remember(context) { HomeViewModel.Factory(context) }
     val homeViewModel: HomeViewModel = viewModel(key = "home", factory = homeFactory)
     val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
     var pendingStorageAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var showSuggestSheet by remember { mutableStateOf(false) }
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -192,6 +209,14 @@ fun PostOfficeSaathiApp(
                             navController.navigate(Routes.PdfLayout)
                         }
                     },
+                    onOpenCalculator = {
+                        analytics.logButtonTap("home_interest_calculator", AnalyticsScreen.Home)
+                        navController.navigate(Routes.Calculator)
+                    },
+                    onSuggestPlans = {
+                        analytics.logButtonTap("home_suggest_plans", AnalyticsScreen.Home)
+                        showSuggestSheet = true
+                    },
                     onOpenSettings = {
                         analytics.logButtonTap("home_settings", AnalyticsScreen.Home)
                         navController.navigate(Routes.Settings)
@@ -232,6 +257,85 @@ fun PostOfficeSaathiApp(
             composable(Routes.Privacy) {
                 TrackScreen(analytics, AnalyticsScreen.Privacy)
                 PrivacyScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.Calculator) {
+                TrackScreen(analytics, AnalyticsScreen.Calculator)
+                CalculatorHomeRoute(
+                    analytics = analytics,
+                    onBack = {
+                        analytics.logButtonTap("calculator_back", AnalyticsScreen.Calculator)
+                        navController.popBackStack()
+                    },
+                    onOpenScheme = { schemeType ->
+                        navController.navigate(schemeRoute(schemeType, null))
+                    },
+                    onSuggestPlans = {
+                        analytics.logButtonTap("calculator_suggest_plans", AnalyticsScreen.Calculator)
+                        showSuggestSheet = true
+                    }
+                )
+            }
+            composable(
+                route = Routes.SchemeCalculator,
+                arguments = listOf(
+                    navArgument("schemeType") { type = NavType.StringType },
+                    navArgument("amount") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { entry ->
+                TrackScreen(analytics, AnalyticsScreen.SchemeCalculator)
+                val schemeType = SchemeType.fromRoute(entry.arguments?.getString("schemeType").orEmpty())
+                val initialAmount = entry.arguments?.getString("amount")?.toDoubleOrNull()
+                SchemeCalculatorRoute(
+                    analytics = analytics,
+                    schemeType = schemeType,
+                    initialAmount = initialAmount,
+                    onBack = {
+                        analytics.logButtonTap("scheme_calculator_back", AnalyticsScreen.SchemeCalculator)
+                        navController.popBackStack()
+                    },
+                    onResult = { result ->
+                        calculatorFlowViewModel.setResult(result)
+                        navController.navigate(Routes.CalculatorResult)
+                    }
+                )
+            }
+            composable(Routes.CalculatorResult) {
+                TrackScreen(analytics, AnalyticsScreen.CalculatorResult)
+                CalculatorResultScreen(
+                    result = calculatorResult,
+                    onBack = {
+                        analytics.logButtonTap("calculator_result_back", AnalyticsScreen.CalculatorResult)
+                        navController.popBackStack()
+                    },
+                    onShareWhatsApp = {
+                        analytics.logEvent(AnalyticsEvent.ResultShared)
+                        calculatorFlowViewModel.shareText()?.let { shareText(context, it, preferWhatsApp = true) }
+                    },
+                    onShareMore = {
+                        analytics.logEvent(AnalyticsEvent.ResultShared)
+                        calculatorFlowViewModel.shareText()?.let { shareText(context, it) }
+                    }
+                )
+            }
+            composable(Routes.AgentDirectory) {
+                TrackScreen(analytics, AnalyticsScreen.AgentDirectory)
+                CalculatorPlaceholderScreen(
+                    title = "Agent Directory",
+                    message = "Use Suggest Plans to search agents by pincode.",
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Routes.PlanResult) {
+                TrackScreen(analytics, AnalyticsScreen.PlanSuggester)
+                CalculatorPlaceholderScreen(
+                    title = "Plan Results",
+                    message = "Use Suggest Plans to compare schemes from the latest saved rates.",
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(Routes.Forms) {
                 TrackScreen(analytics, AnalyticsScreen.Forms)
@@ -335,8 +439,21 @@ fun PostOfficeSaathiApp(
                 )
             }
         }
+        if (showSuggestSheet) {
+            TrackScreen(analytics, AnalyticsScreen.PlanSuggester)
+            SuggestBottomSheet(
+                analytics = analytics,
+                onDismiss = { showSuggestSheet = false },
+                onOpenScheme = { schemeType, amount ->
+                    navController.navigate(schemeRoute(schemeType, amount))
+                }
+            )
+        }
     }
 }
+
+private fun schemeRoute(schemeType: SchemeType, amount: Double?): String =
+    "calculator/scheme/${schemeType.name}?amount=${amount?.takeIf { it > 0.0 } ?: ""}"
 
 private fun openPlayStore(context: Context) {
     val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${context.packageName}"))
@@ -374,6 +491,28 @@ private fun shareDocument(context: Context, uriString: String) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(intent, "Share PDF"))
+}
+
+private fun shareText(context: Context, text: String, preferWhatsApp: Boolean = false) {
+    if (preferWhatsApp && tryShareTextWithPackage(context, text, "com.whatsapp")) return
+    if (preferWhatsApp && tryShareTextWithPackage(context, text, "com.whatsapp.w4b")) return
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share calculation"))
+}
+
+private fun tryShareTextWithPackage(context: Context, text: String, packageName: String): Boolean {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+        setPackage(packageName)
+    }
+    return runCatching {
+        context.startActivity(intent)
+        true
+    }.getOrDefault(false)
 }
 
 private fun String.toDocumentUri(context: Context): Uri {
