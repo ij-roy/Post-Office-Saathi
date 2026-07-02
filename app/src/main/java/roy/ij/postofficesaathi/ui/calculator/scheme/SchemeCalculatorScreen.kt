@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -441,12 +440,12 @@ private fun CustomTypeSelector(selected: CustomCalculatorType, onSelected: (Cust
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ChipRow(content: @Composable FlowRowScope.() -> Unit) {
+private fun ChipRow(content: @Composable () -> Unit) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        content = content
+        content = { content() }
     )
 }
 

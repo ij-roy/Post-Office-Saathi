@@ -26,8 +26,8 @@ android {
         applicationId = "roy.ij.postofficesaathi"
         minSdk = 23
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.2.4"
+        versionCode = 10
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

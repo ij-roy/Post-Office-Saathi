@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -63,58 +63,66 @@ fun HomeScreen(
 
     SaathiScreen {
         Box(Modifier.fillMaxSize()) {
-            Column(
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+                    .fillMaxSize()
                     .padding(top = headerHeight)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = PagePadding)
-                        .padding(top = 54.dp, bottom = 22.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillParentMaxHeight(fraction = 0.88f)
+                            .padding(horizontal = PagePadding),
+                        contentAlignment = Alignment.Center
                     ) {
-                        HomeActionCard(
-                            title = "Download\nForms",
-                            visual = HomeVisual.Forms,
-                            modifier = Modifier.weight(1f),
-                            onClick = onOpenForms
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                HomeActionCard(
+                                    title = "Download\nForms",
+                                    visual = HomeVisual.Forms,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = onOpenForms
+                                )
 
-                        HomeActionCard(
-                            title = "Create\nPDF",
-                            visual = HomeVisual.Pdf,
-                            modifier = Modifier.weight(1f),
-                            onClick = onCreatePdf
-                        )
+                                HomeActionCard(
+                                    title = "Create\nPDF",
+                                    visual = HomeVisual.Pdf,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = onCreatePdf
+                                )
+                            }
+                            HomeActionCard(
+                                title = "Interest Calculator",
+                                visual = HomeVisual.Calculator,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = onOpenCalculator
+                            )
+                        }
                     }
-                    HomeActionCard(
-                        title = "Interest Calculator",
-                        visual = HomeVisual.Calculator,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onOpenCalculator
-                    )
                 }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = PagePadding)
-                        .padding(bottom = 112.dp)
-                ) {
-                    RecentWorkPanel(
-                        items = state.recentItems,
-                        onOpen = onOpenRecent,
-                        onShare = onShareRecent
-                    )
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = PagePadding)
+                            .padding(bottom = 24.dp)
+                    ) {
+                        RecentWorkPanel(
+                            items = state.recentItems,
+                            onOpen = onOpenRecent,
+                            onShare = onShareRecent
+                        )
+                    }
                 }
             }
 
