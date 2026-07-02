@@ -1,0 +1,13 @@
+{
+  "version": "2026-07-02",
+  "links": [
+    {
+      "id": "posb_account_balance",
+      "title": "Account Balance",
+      "subtitle": "Open India Post POSB passbook",
+      "url": "https://posbseva.indiapost.gov.in/indiapost/ippb-passbook",
+      "enabled": true,
+      "displayOrder": 1
+    }
+  ]
+}
