@@ -40,9 +40,15 @@ class AppSettingsViewModel(
     private val _externalActions = MutableSharedFlow<AppSettingsExternalAction>()
     val externalActions: SharedFlow<AppSettingsExternalAction> = _externalActions.asSharedFlow()
 
-    fun completeOnboarding(skipped: Boolean) {
+    fun completeOnboarding(skipped: Boolean, pageIndex: Int? = null, pageTitle: String? = null) {
         viewModelScope.launch {
-            analytics.logEvent(if (skipped) AnalyticsEvent.OnboardingSkipped else AnalyticsEvent.OnboardingCompleted)
+            analytics.logEvent(
+                if (skipped) AnalyticsEvent.OnboardingSkipped else AnalyticsEvent.OnboardingCompleted,
+                mapOf(
+                    AnalyticsParam.PageIndex to pageIndex,
+                    AnalyticsParam.PageTitle to pageTitle
+                )
+            )
             repository.markOnboardingSeen()
         }
     }
@@ -64,18 +70,6 @@ class AppSettingsViewModel(
                 _externalActions.emit(AppSettingsExternalAction.RequestReview)
             }
         }
-    }
-
-    fun logSettingsOpened() {
-        analytics.logEvent(AnalyticsEvent.SettingsOpened)
-    }
-
-    fun logHelpOpened() {
-        analytics.logEvent(AnalyticsEvent.HelpOpened)
-    }
-
-    fun logPrivacyOpened() {
-        analytics.logEvent(AnalyticsEvent.PrivacyOpened)
     }
 
     fun logFeedbackEmailTapped() {

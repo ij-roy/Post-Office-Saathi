@@ -52,13 +52,6 @@ class FirebaseSaathiAnalytics(
             crashlytics.setCustomKey(key, value?.toString()?.take(100) ?: "")
         }
         crashlytics.recordException(throwable)
-        logEvent(
-            "${area}_failed".take(40),
-            params + mapOf(
-                AnalyticsParam.ErrorArea to area,
-                AnalyticsParam.ErrorType to throwable.javaClass.simpleName
-            )
-        )
     }
 
     private fun Map<String, Any?>.toBundle(): Bundle =
@@ -66,13 +59,13 @@ class FirebaseSaathiAnalytics(
             forEach { (key, value) ->
                 when (value) {
                     null -> Unit
-                    is String -> bundle.putString(key, value.take(100))
-                    is Int -> bundle.putInt(key, value)
+                    is String -> bundle.putString(key, value)
+                    is Int -> bundle.putLong(key, value.toLong())
                     is Long -> bundle.putLong(key, value)
                     is Double -> bundle.putDouble(key, value)
                     is Float -> bundle.putDouble(key, value.toDouble())
                     is Boolean -> bundle.putString(key, value.toString())
-                    else -> bundle.putString(key, value.toString().take(100))
+                    else -> bundle.putString(key, value.toString())
                 }
             }
         }

@@ -262,7 +262,6 @@ internal fun ImmediateCornerCorrectionScreen(
             CameraPillButton(
                 "Apply",
                 onClick = {
-                    analytics.logButtonTap("image_adjust_apply", AnalyticsScreen.Capture)
                     onApply()
                 },
                 modifier = Modifier.weight(1f),

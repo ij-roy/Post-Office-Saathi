@@ -260,11 +260,27 @@ fun PdfCreatedSuccessScreen(
             SaathiSecondaryButton(
                 "Open",
                 onClick = {
-                    analytics.logButtonTap("pdf_success_open", AnalyticsScreen.Success)
                     pdfPath?.let {
                         runCatching { openPdf(context, it) }
-                            .onSuccess { analytics.logEvent(AnalyticsEvent.PdfOpened, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
-                            .onFailure { error -> analytics.recordError("pdf_open", error, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
+                            .onSuccess {
+                                analytics.logEvent(
+                                    AnalyticsEvent.PdfOpened,
+                                    mapOf(
+                                        AnalyticsParam.Flow to AnalyticsFlow.Pdf,
+                                        AnalyticsParam.PdfFilename to pdfName
+                                    )
+                                )
+                            }
+                            .onFailure { error ->
+                                val params = mapOf(
+                                    AnalyticsParam.Flow to AnalyticsFlow.Pdf,
+                                    AnalyticsParam.PdfFilename to pdfName,
+                                    AnalyticsParam.ErrorArea to "pdf_open",
+                                    AnalyticsParam.ErrorType to error.javaClass.simpleName
+                                )
+                                analytics.logEvent(AnalyticsEvent.PdfOpenFailed, params)
+                                analytics.recordError("pdf_open", error, params)
+                            }
                     }
                 },
                 modifier = Modifier.weight(1f)
@@ -272,11 +288,27 @@ fun PdfCreatedSuccessScreen(
             SaathiSecondaryButton(
                 "Share",
                 onClick = {
-                    analytics.logButtonTap("pdf_success_share", AnalyticsScreen.Success)
                     pdfPath?.let {
                         runCatching { sharePdf(context, it) }
-                            .onSuccess { analytics.logEvent(AnalyticsEvent.PdfShared, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
-                            .onFailure { error -> analytics.recordError("pdf_share", error, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf)) }
+                            .onSuccess {
+                                analytics.logEvent(
+                                    AnalyticsEvent.PdfShared,
+                                    mapOf(
+                                        AnalyticsParam.Flow to AnalyticsFlow.Pdf,
+                                        AnalyticsParam.PdfFilename to pdfName
+                                    )
+                                )
+                            }
+                            .onFailure { error ->
+                                val params = mapOf(
+                                    AnalyticsParam.Flow to AnalyticsFlow.Pdf,
+                                    AnalyticsParam.PdfFilename to pdfName,
+                                    AnalyticsParam.ErrorArea to "pdf_share",
+                                    AnalyticsParam.ErrorType to error.javaClass.simpleName
+                                )
+                                analytics.logEvent(AnalyticsEvent.PdfShareFailed, params)
+                                analytics.recordError("pdf_share", error, params)
+                            }
                     }
                 },
                 modifier = Modifier.weight(1f)

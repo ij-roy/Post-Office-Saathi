@@ -189,7 +189,6 @@ fun DocumentCaptureScreen(
     ) { uri ->
         uri?.let {
             pdfFlowViewModel.importGalleryImage(it, currentLabel) { file ->
-                analytics.logButtonTap("gallery_import", AnalyticsScreen.Capture)
                 analytics.logEvent(
                     AnalyticsEvent.GalleryImportSucceeded,
                     pdfParams(layoutType) + mapOf(AnalyticsParam.CaptureSource to "gallery")
@@ -334,7 +333,6 @@ fun DocumentCaptureScreen(
             CameraCaptureControls(
                 isLandscape = isLandscape,
                 onCapture = {
-                    analytics.logButtonTap("camera_capture", AnalyticsScreen.Capture)
                     analytics.logEvent(
                         AnalyticsEvent.CaptureStarted,
                         pdfParams(layoutType) + mapOf(AnalyticsParam.CaptureSource to "camera")
@@ -354,11 +352,12 @@ fun DocumentCaptureScreen(
                         },
                         onError = { error ->
                             captureError = "Could not capture photo. Please try again."
-                            analytics.logEvent(
-                                AnalyticsEvent.CaptureFailed,
-                                pdfParams(layoutType, error) + mapOf(AnalyticsParam.CaptureSource to "camera")
+                            val params = pdfParams(layoutType, error) + mapOf(
+                                AnalyticsParam.CaptureSource to "camera",
+                                AnalyticsParam.ErrorArea to "capture"
                             )
-                            analytics.recordError("capture", error, pdfParams(layoutType))
+                            analytics.logEvent(AnalyticsEvent.CaptureFailed, params)
+                            analytics.recordError("capture", error, params)
                         }
                     )
                 },

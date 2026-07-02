@@ -83,7 +83,7 @@ fun FormsRoute(
                 is FormsExternalAction.OpenPdf -> {
                     runCatching { openPdf(context, action.document) }
                         .onSuccess {
-                            viewModel.onFormOpened(action.form, action.query)
+                            viewModel.onFormOpened(action.form, action.query, action.document)
                             onMeaningfulActionCompleted()
                         }
                         .onFailure { viewModel.onExternalActionFailed("form_open", it, action.form, action.query) }
@@ -91,7 +91,7 @@ fun FormsRoute(
                 is FormsExternalAction.SharePdf -> {
                     runCatching { sharePdf(context, action.document) }
                         .onSuccess {
-                            viewModel.onFormShared(action.form, action.query)
+                            viewModel.onFormShared(action.form, action.query, action.document)
                             onMeaningfulActionCompleted()
                         }
                         .onFailure { viewModel.onExternalActionFailed("form_share", it, action.form, action.query) }

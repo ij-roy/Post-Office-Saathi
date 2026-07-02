@@ -20,7 +20,7 @@ class SchemeCalculatorPresentationTest {
         assertEquals("RD Calculator", presentation.title)
         assertEquals(null, presentation.subtitle)
         assertEquals("Monthly Amount", presentation.amountLabel)
-        assertEquals("Enter monthly amount (e.g. 5000)", presentation.amountPlaceholder)
+        assertEquals("Enter monthly amount (e.g. 100)", presentation.amountPlaceholder)
         assertEquals("From", presentation.fromDateLabel)
         assertEquals("To", presentation.toDateLabel)
         assertTrue(presentation.showDateRange)
@@ -48,18 +48,18 @@ class SchemeCalculatorPresentationTest {
     @Test
     fun `calculator presentations use scheme specific placeholders`() {
         val expectations = mapOf(
-            SchemeType.RD to "Enter monthly amount (e.g. 5000)",
-            SchemeType.TD to "Enter investment amount (e.g. 100000)",
-            SchemeType.MIS to "Enter investment amount (e.g. 100000)",
-            SchemeType.NSC to "Enter investment amount (e.g. 100000)",
-            SchemeType.KVP to "Enter investment amount (e.g. 100000)",
-            SchemeType.SCSS to "Enter investment amount (e.g. 100000)",
-            SchemeType.MSSC to "Enter investment amount (e.g. 100000)",
+            SchemeType.RD to "Enter monthly amount (e.g. 100)",
+            SchemeType.TD to "Enter amount (e.g. 1,000)",
+            SchemeType.MIS to "Enter amount (e.g. 1,000)",
+            SchemeType.NSC to "Enter amount (e.g. 1,000)",
+            SchemeType.KVP to "Enter amount (e.g. 1,000)",
+            SchemeType.SCSS to "Enter amount (e.g. 1,000)",
+            SchemeType.MSSC to "Enter amount (e.g. 1,000)",
             SchemeType.PPF to "Enter yearly deposit (e.g. 50000)",
             SchemeType.SSY to "Enter yearly deposit (e.g. 50000)",
             SchemeType.SB to "Enter balance amount (e.g. 25000)",
-            SchemeType.SIMPLE_INTEREST to "Enter principal amount (e.g. 100000)",
-            SchemeType.COMPOUND_INTEREST to "Enter principal amount (e.g. 100000)"
+            SchemeType.SIMPLE_INTEREST to "principal amount (e.g. 100000)",
+            SchemeType.COMPOUND_INTEREST to "principal amount (e.g. 100000)"
         )
 
         expectations.forEach { (schemeType, placeholder) ->
@@ -88,7 +88,7 @@ class SchemeCalculatorPresentationTest {
             val presentation = SchemeCalculatorPresentation.forScheme(schemeType)
 
             assertEquals("Principal Amount", presentation.amountLabel)
-            assertEquals("Enter principal amount (e.g. 100000)", presentation.amountPlaceholder)
+            assertEquals("principal amount (e.g. 100000)", presentation.amountPlaceholder)
             assertFalse("Custom calculator should not show date range", presentation.showDateRange)
         }
     }

@@ -19,7 +19,7 @@ class RatesSyncWorker(
                     AnalyticsEvent.RatesSyncCompleted,
                     mapOf(
                         AnalyticsParam.RatesVersion to result.version,
-                        AnalyticsParam.UsedFallback to false
+                        AnalyticsParam.SyncResult to "updated"
                     )
                 )
                 Result.success()
@@ -29,7 +29,7 @@ class RatesSyncWorker(
                     AnalyticsEvent.RatesSyncCompleted,
                     mapOf(
                         AnalyticsParam.RatesVersion to result.version,
-                        AnalyticsParam.UsedFallback to true
+                        AnalyticsParam.SyncResult to "unchanged"
                     )
                 )
                 Result.success()
@@ -37,7 +37,10 @@ class RatesSyncWorker(
             is RatesSyncResult.Failed -> {
                 analytics.logEvent(
                     AnalyticsEvent.RatesSyncFailed,
-                    mapOf(AnalyticsParam.ErrorType to result.throwable.javaClass.simpleName)
+                    mapOf(
+                        AnalyticsParam.SyncResult to "failed",
+                        AnalyticsParam.ErrorType to result.throwable.javaClass.simpleName
+                    )
                 )
                 if (runAttemptCount < 2) Result.retry() else Result.failure()
             }

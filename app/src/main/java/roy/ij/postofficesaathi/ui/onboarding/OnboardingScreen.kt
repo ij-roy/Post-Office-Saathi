@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -54,12 +55,17 @@ private val pages = listOf(
 
 @Composable
 fun OnboardingScreen(
-    onSkip: () -> Unit,
-    onFinish: () -> Unit
+    onSkip: (Int, String) -> Unit,
+    onFinish: (Int, String) -> Unit,
+    onPageViewed: (Int, String) -> Unit = { _, _ -> }
 ) {
     var pageIndex by remember { mutableIntStateOf(0) }
     var horizontalDrag by remember { mutableFloatStateOf(0f) }
     val page = pages[pageIndex]
+
+    LaunchedEffect(pageIndex) {
+        onPageViewed(pageIndex, page.title)
+    }
 
     SaathiScreen {
         Column(
@@ -90,7 +96,7 @@ fun OnboardingScreen(
                 horizontalArrangement = Arrangement.End
             ) {
                 if (pageIndex < pages.lastIndex) {
-                    SaathiSecondaryButton(text = "Skip", onClick = onSkip)
+                    SaathiSecondaryButton(text = "Skip", onClick = { onSkip(pageIndex, page.title) })
                 } else {
                     Spacer(modifier = Modifier.height(46.dp))
                 }
@@ -151,7 +157,7 @@ fun OnboardingScreen(
                 SaathiPrimaryButton(
                     text = if (pageIndex == pages.lastIndex) "Get Started" else "Next",
                     onClick = {
-                        if (pageIndex == pages.lastIndex) onFinish() else pageIndex += 1
+                        if (pageIndex == pages.lastIndex) onFinish(pageIndex, page.title) else pageIndex += 1
                     }
                 )
                 Surface(modifier = Modifier.height(8.dp), color = MaterialTheme.colorScheme.background) {}

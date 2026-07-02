@@ -41,11 +41,13 @@ import roy.ij.postofficesaathi.analytics.AnalyticsParam
 import roy.ij.postofficesaathi.analytics.AnalyticsScreen
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.domain.calculator.SchemeType
+import roy.ij.postofficesaathi.data.recent.RecentWorkItem
 import roy.ij.postofficesaathi.ui.calculator.CalculatorFlowViewModel
 import roy.ij.postofficesaathi.ui.calculator.CalculatorHomeRoute
 import roy.ij.postofficesaathi.ui.calculator.CalculatorPlaceholderScreen
 import roy.ij.postofficesaathi.ui.calculator.scheme.CalculatorResultScreen
 import roy.ij.postofficesaathi.ui.calculator.scheme.SchemeCalculatorRoute
+import roy.ij.postofficesaathi.ui.calculator.scheme.resultShareParams
 import roy.ij.postofficesaathi.ui.calculator.suggest.SuggestBottomSheet
 import roy.ij.postofficesaathi.ui.forms.FormsRoute
 import roy.ij.postofficesaathi.ui.home.HomeExternalAction
@@ -107,25 +109,36 @@ fun PostOfficeSaathiApp(
     val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
     var pendingStorageAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingStorageFlow by remember { mutableStateOf<String?>(null) }
     var showSuggestSheet by remember { mutableStateOf(false) }
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         val action = pendingStorageAction
+        val flow = pendingStorageFlow
         pendingStorageAction = null
+        pendingStorageFlow = null
+        analytics.logEvent(
+            AnalyticsEvent.StoragePermissionResult,
+            mapOf(
+                AnalyticsParam.Flow to flow,
+                AnalyticsParam.Granted to granted
+            )
+        )
         if (granted) {
             action?.invoke()
         } else {
             Toast.makeText(context, "Storage permission is needed to save files in Documents.", Toast.LENGTH_SHORT).show()
         }
     }
-    fun runWithLegacyStoragePermission(action: () -> Unit) {
+    fun runWithLegacyStoragePermission(flow: String, action: () -> Unit) {
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         ) {
             action()
         } else {
             pendingStorageAction = action
+            pendingStorageFlow = flow
             storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
     }
@@ -144,10 +157,37 @@ fun PostOfficeSaathiApp(
         homeViewModel.externalActions.collect { action ->
             runCatching {
                 when (action) {
-                    is HomeExternalAction.Open -> openDocument(context, action.item.uri)
-                    is HomeExternalAction.Share -> shareDocument(context, action.item.uri)
+                    is HomeExternalAction.Open -> {
+                        openDocument(context, action.item.uri)
+                        analytics.logEvent(AnalyticsEvent.RecentWorkOpened, recentWorkParams(action.item))
+                    }
+                    is HomeExternalAction.Share -> {
+                        shareDocument(context, action.item.uri)
+                        analytics.logEvent(AnalyticsEvent.RecentWorkShared, recentWorkParams(action.item))
+                    }
                 }
-            }.onFailure {
+            }.onFailure { error ->
+                val item = when (action) {
+                    is HomeExternalAction.Open -> action.item
+                    is HomeExternalAction.Share -> action.item
+                }
+                val area = when (action) {
+                    is HomeExternalAction.Open -> "recent_work_open"
+                    is HomeExternalAction.Share -> "recent_work_share"
+                }
+                val params = recentWorkParams(item) + mapOf(
+                    AnalyticsParam.ErrorArea to area,
+                    AnalyticsParam.ErrorType to error.javaClass.simpleName
+                )
+                analytics.logEvent(
+                    if (action is HomeExternalAction.Open) {
+                        AnalyticsEvent.RecentWorkOpenFailed
+                    } else {
+                        AnalyticsEvent.RecentWorkShareFailed
+                    },
+                    params
+                )
+                analytics.recordError(area, error, params)
                 homeViewModel.onExternalActionFailed()
             }
         }
@@ -177,17 +217,26 @@ fun PostOfficeSaathiApp(
             composable(Routes.Onboarding) {
                 TrackScreen(analytics, AnalyticsScreen.Onboarding)
                 OnboardingScreen(
-                    onSkip = {
-                        settingsViewModel.completeOnboarding(skipped = true)
+                    onSkip = { pageIndex, pageTitle ->
+                        settingsViewModel.completeOnboarding(skipped = true, pageIndex = pageIndex, pageTitle = pageTitle)
                         navController.navigate(Routes.Home) {
                             popUpTo(Routes.Onboarding) { inclusive = true }
                         }
                     },
-                    onFinish = {
-                        settingsViewModel.completeOnboarding(skipped = false)
+                    onFinish = { pageIndex, pageTitle ->
+                        settingsViewModel.completeOnboarding(skipped = false, pageIndex = pageIndex, pageTitle = pageTitle)
                         navController.navigate(Routes.Home) {
                             popUpTo(Routes.Onboarding) { inclusive = true }
                         }
+                    },
+                    onPageViewed = { pageIndex, pageTitle ->
+                        analytics.logEvent(
+                            AnalyticsEvent.OnboardingPageViewed,
+                            mapOf(
+                                AnalyticsParam.PageIndex to pageIndex,
+                                AnalyticsParam.PageTitle to pageTitle
+                            )
+                        )
                     }
                 )
             }
@@ -196,14 +245,13 @@ fun PostOfficeSaathiApp(
                 HomeScreen(
                     state = homeState,
                     onOpenForms = {
-                        runWithLegacyStoragePermission {
+                        runWithLegacyStoragePermission(AnalyticsFlow.Forms) {
                             analytics.logButtonTap("home_download_forms", AnalyticsScreen.Home)
                             navController.navigate(Routes.Forms)
                         }
                     },
                     onCreatePdf = {
-                        runWithLegacyStoragePermission {
-                            analytics.logButtonTap("home_create_pdf", AnalyticsScreen.Home)
+                        runWithLegacyStoragePermission(AnalyticsFlow.Pdf) {
                             analytics.logEvent(AnalyticsEvent.PdfFlowStarted, mapOf(AnalyticsParam.Flow to AnalyticsFlow.Pdf))
                             analytics.setContext(AnalyticsParam.Flow, AnalyticsFlow.Pdf)
                             navController.navigate(Routes.PdfLayout)
@@ -227,7 +275,6 @@ fun PostOfficeSaathiApp(
             }
             composable(Routes.Settings) {
                 TrackScreen(analytics, AnalyticsScreen.Settings)
-                LaunchedEffect(Unit) { settingsViewModel.logSettingsOpened() }
                 SettingsScreen(
                     state = settingsState,
                     onBack = { navController.popBackStack() },
@@ -241,11 +288,11 @@ fun PostOfficeSaathiApp(
                         sendFeedbackEmail(context)
                     },
                     onHelp = {
-                        settingsViewModel.logHelpOpened()
+                        analytics.logButtonTap("settings_help", AnalyticsScreen.Settings)
                         navController.navigate(Routes.Help)
                     },
                     onPrivacy = {
-                        settingsViewModel.logPrivacyOpened()
+                        analytics.logButtonTap("settings_privacy", AnalyticsScreen.Settings)
                         navController.navigate(Routes.Privacy)
                     }
                 )
@@ -312,12 +359,36 @@ fun PostOfficeSaathiApp(
                         navController.popBackStack()
                     },
                     onShareWhatsApp = {
-                        analytics.logEvent(AnalyticsEvent.ResultShared)
-                        calculatorFlowViewModel.shareText()?.let { shareText(context, it, preferWhatsApp = true) }
+                        val result = calculatorResult
+                        val text = calculatorFlowViewModel.shareText()
+                        if (result != null && text != null) {
+                            runCatching { shareText(context, text, preferWhatsApp = true) }
+                                .onSuccess { channel ->
+                                    analytics.logEvent(AnalyticsEvent.ResultShared, resultShareParams(result, channel))
+                                }
+                                .onFailure { error ->
+                                    val params = resultShareParams(result, "whatsapp", error) +
+                                        mapOf(AnalyticsParam.ErrorArea to "result_share")
+                                    analytics.logEvent(AnalyticsEvent.ResultShareFailed, params)
+                                    analytics.recordError("result_share", error, params)
+                                }
+                        }
                     },
                     onShareMore = {
-                        analytics.logEvent(AnalyticsEvent.ResultShared)
-                        calculatorFlowViewModel.shareText()?.let { shareText(context, it) }
+                        val result = calculatorResult
+                        val text = calculatorFlowViewModel.shareText()
+                        if (result != null && text != null) {
+                            runCatching { shareText(context, text) }
+                                .onSuccess { channel ->
+                                    analytics.logEvent(AnalyticsEvent.ResultShared, resultShareParams(result, channel))
+                                }
+                                .onFailure { error ->
+                                    val params = resultShareParams(result, "more_apps", error) +
+                                        mapOf(AnalyticsParam.ErrorArea to "result_share")
+                                    analytics.logEvent(AnalyticsEvent.ResultShareFailed, params)
+                                    analytics.recordError("result_share", error, params)
+                                }
+                        }
                     }
                 )
             }
@@ -493,14 +564,15 @@ private fun shareDocument(context: Context, uriString: String) {
     context.startActivity(Intent.createChooser(intent, "Share PDF"))
 }
 
-private fun shareText(context: Context, text: String, preferWhatsApp: Boolean = false) {
-    if (preferWhatsApp && tryShareTextWithPackage(context, text, "com.whatsapp")) return
-    if (preferWhatsApp && tryShareTextWithPackage(context, text, "com.whatsapp.w4b")) return
+private fun shareText(context: Context, text: String, preferWhatsApp: Boolean = false): String {
+    if (preferWhatsApp && tryShareTextWithPackage(context, text, "com.whatsapp")) return "whatsapp"
+    if (preferWhatsApp && tryShareTextWithPackage(context, text, "com.whatsapp.w4b")) return "whatsapp_business"
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)
     }
     context.startActivity(Intent.createChooser(intent, "Share calculation"))
+    return "more_apps"
 }
 
 private fun tryShareTextWithPackage(context: Context, text: String, packageName: String): Boolean {
@@ -521,6 +593,13 @@ private fun String.toDocumentUri(context: Context): Uri {
     val file = if (uri.scheme == "file") File(uri.path.orEmpty()) else File(this)
     return FileProvider.getUriForFile(context, "${context.packageName}.files", file)
 }
+
+private fun recentWorkParams(item: RecentWorkItem): Map<String, Any?> =
+    mapOf(
+        AnalyticsParam.Screen to AnalyticsScreen.Home,
+        AnalyticsParam.ItemType to item.type.name,
+        AnalyticsParam.DocumentName to item.title
+    )
 
 @Composable
 private fun TrackScreen(analytics: SaathiAnalytics, screen: String) {

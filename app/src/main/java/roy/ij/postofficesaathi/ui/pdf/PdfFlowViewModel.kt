@@ -21,7 +21,6 @@ import kotlinx.coroutines.withContext
 import roy.ij.postofficesaathi.analytics.AnalyticsEvent
 import roy.ij.postofficesaathi.analytics.AnalyticsFlow
 import roy.ij.postofficesaathi.analytics.AnalyticsParam
-import roy.ij.postofficesaathi.analytics.AnalyticsScreen
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.pdf.PdfCreationUseCase
 import roy.ij.postofficesaathi.data.pdf.PdfImageProcessor
@@ -67,13 +66,6 @@ class PdfFlowViewModel(
     val externalActions: SharedFlow<PdfFlowExternalAction> = _externalActions.asSharedFlow()
 
     fun selectLayout(layoutType: PdfLayoutType) {
-        analytics.logEvent(
-            AnalyticsEvent.PdfLayoutSelected,
-            mapOf(
-                AnalyticsParam.Flow to AnalyticsFlow.Pdf,
-                AnalyticsParam.LayoutType to layoutType.analyticsName()
-            )
-        )
         analytics.setContext(AnalyticsParam.LayoutType, layoutType.analyticsName())
         updateState(
             _uiState.value.copy(
@@ -114,7 +106,9 @@ class PdfFlowViewModel(
                 onImported(file)
             }.onFailure { error ->
                 setError("Could not open this image. Please try another one.")
-                analytics.recordError("gallery_import", error, pdfParams(_uiState.value.selectedLayout))
+                val params = pdfErrorParams("gallery_import", _uiState.value.selectedLayout, error)
+                analytics.logEvent(AnalyticsEvent.GalleryImportFailed, params)
+                analytics.recordError("gallery_import", error, params)
             }
         }
     }
@@ -129,7 +123,9 @@ class PdfFlowViewModel(
                 onPrepared(prepared)
             }.onFailure { error ->
                 clearProcessing()
-                analytics.recordError("capture_prepare", error, pdfParams(_uiState.value.selectedLayout))
+                val params = pdfErrorParams("capture_prepare", _uiState.value.selectedLayout, error)
+                analytics.logEvent(AnalyticsEvent.CapturePrepareFailed, params)
+                analytics.recordError("capture_prepare", error, params)
                 onPrepared(file)
             }
         }
@@ -156,7 +152,9 @@ class PdfFlowViewModel(
                 )
                 updateState(_uiState.value.copy(corners = corners, isProcessing = false, processingMessage = null))
             }.onFailure { error ->
-                analytics.recordError("corner_detection", error, pdfParams(_uiState.value.selectedLayout))
+                val params = pdfErrorParams("corner_detection", _uiState.value.selectedLayout, error)
+                analytics.logEvent(AnalyticsEvent.CornerDetectionFailed, params)
+                analytics.recordError("corner_detection", error, params)
                 updateState(_uiState.value.copy(corners = PdfImageProcessor.defaultCorners(), isProcessing = false, processingMessage = null))
             }
         }
@@ -169,7 +167,6 @@ class PdfFlowViewModel(
     fun rotateWorkingImage(clockwise: Boolean) {
         val path = _uiState.value.workingImagePath ?: return
         viewModelScope.launch {
-            analytics.logButtonTap(if (clockwise) "image_rotate_right" else "image_rotate_left", AnalyticsScreen.Capture)
             setProcessing("Rotating image...")
             runCatching {
                 withContext(Dispatchers.Default) { imageProcessor.rotateImageFile(File(path), clockwise) }
@@ -178,7 +175,9 @@ class PdfFlowViewModel(
                 loadCorners(rotated)
             }.onFailure { error ->
                 setError("Could not rotate image.")
-                analytics.recordError("image_rotate", error, pdfParams(_uiState.value.selectedLayout))
+                val params = pdfErrorParams("image_rotate", _uiState.value.selectedLayout, error)
+                analytics.logEvent(AnalyticsEvent.ImageRotateFailed, params)
+                analytics.recordError("image_rotate", error, params)
             }
         }
     }
@@ -196,7 +195,9 @@ class PdfFlowViewModel(
                 onAdjusted(corrected)
             }.onFailure { error ->
                 setError("Could not adjust this photo. Please try again.")
-                analytics.recordError("image_adjust", error, pdfParams(_uiState.value.selectedLayout))
+                val params = pdfErrorParams("image_adjust", _uiState.value.selectedLayout, error)
+                analytics.logEvent(AnalyticsEvent.ImageAdjustFailed, params)
+                analytics.recordError("image_adjust", error, params)
             }
         }
     }
@@ -204,10 +205,15 @@ class PdfFlowViewModel(
     fun createPdf() {
         val state = _uiState.value
         viewModelScope.launch {
-            analytics.logButtonTap("pdf_save", AnalyticsScreen.Name)
+            val requestedFilename = requestedPdfFileName(state.customerName, state.selectedLayout)
             analytics.logEvent(
                 AnalyticsEvent.PdfCreateStarted,
-                pdfParams(state.selectedLayout) + mapOf(AnalyticsParam.ImageCount to state.capturedFilePaths.size)
+                pdfCreateStartedParams(
+                    layoutType = state.selectedLayout,
+                    customerName = state.customerName,
+                    imageCount = state.capturedFilePaths.size,
+                    requestedPdfFilename = requestedFilename
+                )
             )
             setProcessing("Creating PDF...")
             runCatching {
@@ -222,7 +228,13 @@ class PdfFlowViewModel(
             }.onSuccess { document ->
                 analytics.logEvent(
                     AnalyticsEvent.PdfCreateSucceeded,
-                    pdfParams(state.selectedLayout) + mapOf(AnalyticsParam.ImageCount to state.capturedFilePaths.size)
+                    pdfCreateSucceededParams(
+                        layoutType = state.selectedLayout,
+                        customerName = state.customerName,
+                        imageCount = state.capturedFilePaths.size,
+                        requestedPdfFilename = requestedFilename,
+                        document = document
+                    )
                 )
                 updateState(
                     _uiState.value.copy(
@@ -235,8 +247,15 @@ class PdfFlowViewModel(
                 _externalActions.emit(PdfFlowExternalAction.PdfCreated(document))
             }.onFailure { error ->
                 setError("Could not create PDF. Please try again.")
-                analytics.logEvent(AnalyticsEvent.PdfCreateFailed, pdfParams(state.selectedLayout, error))
-                analytics.recordError("pdf_create", error, pdfParams(state.selectedLayout))
+                val params = pdfCreateFailedParams(
+                    layoutType = state.selectedLayout,
+                    customerName = state.customerName,
+                    imageCount = state.capturedFilePaths.size,
+                    requestedPdfFilename = requestedFilename,
+                    throwable = error
+                ) + mapOf(AnalyticsParam.ErrorArea to "pdf_create")
+                analytics.logEvent(AnalyticsEvent.PdfCreateFailed, params)
+                analytics.recordError("pdf_create", error, params)
             }
         }
     }

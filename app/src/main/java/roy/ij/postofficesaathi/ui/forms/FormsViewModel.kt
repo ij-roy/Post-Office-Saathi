@@ -15,8 +15,6 @@ import kotlinx.coroutines.launch
 import roy.ij.postofficesaathi.analytics.AnalyticsEvent
 import roy.ij.postofficesaathi.analytics.AnalyticsFlow
 import roy.ij.postofficesaathi.analytics.AnalyticsParam
-import roy.ij.postofficesaathi.analytics.AnalyticsSanitizer
-import roy.ij.postofficesaathi.analytics.AnalyticsScreen
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.forms.FormsLoadResult
 import roy.ij.postofficesaathi.data.forms.FormsRepository
@@ -66,11 +64,11 @@ class FormsViewModel(
             _uiState.update { it.copy(isLoading = true) }
             val result = repository.loadForms()
             analytics.logEvent(
-                "forms_index_loaded",
+                AnalyticsEvent.FormsIndexLoaded,
                 mapOf(
                     AnalyticsParam.Flow to AnalyticsFlow.Forms,
                     AnalyticsParam.FromCache to result.isFromCache,
-                    AnalyticsParam.ResultCountBucket to AnalyticsSanitizer.countBucket(result.forms.size)
+                    AnalyticsParam.ResultCount to result.forms.size
                 )
             )
             _uiState.update { state ->
@@ -85,10 +83,6 @@ class FormsViewModel(
     }
 
     fun updateQuery(query: String) {
-        val previousQuery = _uiState.value.query
-        if (previousQuery.isBlank() && query.isNotBlank()) {
-            analytics.logButtonTap("forms_search_field", AnalyticsScreen.Forms)
-        }
         _uiState.update { state ->
             val visibleForms = FormSearchEngine.search(state.loadResult.forms, query)
             state.copy(query = query, visibleForms = visibleForms)
@@ -101,11 +95,10 @@ class FormsViewModel(
         viewModelScope.launch {
             val query = _uiState.value.query
             setActiveAction(form.id, FormActionKind.Open)
-            analytics.logButtonTap("form_open_or_download", AnalyticsScreen.Forms)
-            analytics.logEvent(AnalyticsEvent.FormDownloadStarted, form.analyticsParams(query))
+            analytics.logEvent(AnalyticsEvent.FormDownloadStarted, formActionParams(form, query, "open"))
             runCatching { repository.downloadForm(form) }
                 .onSuccess { document ->
-                    analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, form.analyticsParams(query))
+                    analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, formActionParams(form, query, "open", document))
                     markFormDownloaded(form.id)
                     if (document.newlySaved) {
                         showMessage("Form saved to Documents/PostOfficeSaathi/Forms.")
@@ -114,8 +107,10 @@ class FormsViewModel(
                 }
                 .onFailure { error ->
                     showMessage(error.downloadFailureMessage())
-                    analytics.logEvent(AnalyticsEvent.FormDownloadFailed, form.analyticsParams(query, error))
-                    analytics.recordError("form_download", error, form.analyticsParams(query))
+                    val params = formActionParams(form, query, "open", throwable = error) +
+                        mapOf(AnalyticsParam.ErrorArea to "form_download")
+                    analytics.logEvent(AnalyticsEvent.FormDownloadFailed, params)
+                    analytics.recordError("form_download", error, params)
                 }
             clearActiveAction()
         }
@@ -126,11 +121,10 @@ class FormsViewModel(
         viewModelScope.launch {
             val query = _uiState.value.query
             setActiveAction(form.id, FormActionKind.Share)
-            analytics.logButtonTap("form_share", AnalyticsScreen.Forms)
-            analytics.logEvent(AnalyticsEvent.FormDownloadStarted, form.analyticsParams(query))
+            analytics.logEvent(AnalyticsEvent.FormDownloadStarted, formActionParams(form, query, "share"))
             runCatching { repository.downloadForm(form) }
                 .onSuccess { document ->
-                    analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, form.analyticsParams(query))
+                    analytics.logEvent(AnalyticsEvent.FormDownloadSucceeded, formActionParams(form, query, "share", document))
                     markFormDownloaded(form.id)
                     if (document.newlySaved) {
                         showMessage("Form saved to Documents/PostOfficeSaathi/Forms.")
@@ -139,19 +133,21 @@ class FormsViewModel(
                 }
                 .onFailure { error ->
                     showMessage(error.downloadFailureMessage())
-                    analytics.logEvent(AnalyticsEvent.FormDownloadFailed, form.analyticsParams(query, error))
-                    analytics.recordError("form_download", error, form.analyticsParams(query))
+                    val params = formActionParams(form, query, "share", throwable = error) +
+                        mapOf(AnalyticsParam.ErrorArea to "form_download")
+                    analytics.logEvent(AnalyticsEvent.FormDownloadFailed, params)
+                    analytics.recordError("form_download", error, params)
                 }
             clearActiveAction()
         }
     }
 
-    fun onFormOpened(form: FormItem, query: String) {
-        analytics.logEvent(AnalyticsEvent.FormOpened, form.analyticsParams(query))
+    fun onFormOpened(form: FormItem, query: String, document: PublicDocumentRef) {
+        analytics.logEvent(AnalyticsEvent.FormOpened, formActionParams(form, query, "open", document))
     }
 
-    fun onFormShared(form: FormItem, query: String) {
-        analytics.logEvent(AnalyticsEvent.FormShared, form.analyticsParams(query))
+    fun onFormShared(form: FormItem, query: String, document: PublicDocumentRef) {
+        analytics.logEvent(AnalyticsEvent.FormShared, formActionParams(form, query, "share", document))
     }
 
     fun onExternalActionFailed(area: String, error: Throwable, form: FormItem, query: String) {
@@ -161,7 +157,17 @@ class FormsViewModel(
                 else -> "Could not share this form. Please try again."
             }
         )
-        analytics.recordError(area, error, form.analyticsParams(query))
+        val params = formActionParams(
+            form = form,
+            query = query,
+            actionType = if (area == "form_open") "open" else "share",
+            throwable = error
+        ) + mapOf(AnalyticsParam.ErrorArea to area)
+        analytics.logEvent(
+            if (area == "form_open") AnalyticsEvent.FormOpenFailed else AnalyticsEvent.FormShareFailed,
+            params
+        )
+        analytics.recordError(area, error, params)
     }
 
     private fun showMessage(message: String) {
@@ -188,15 +194,9 @@ class FormsViewModel(
     }
 
     private fun logSearch(query: String, resultCount: Int) {
-        if (query.isBlank()) return
-        val params = mapOf(
-            AnalyticsParam.Flow to AnalyticsFlow.Forms,
-            AnalyticsParam.QueryTextSafe to AnalyticsSanitizer.safeSearchText(query),
-            AnalyticsParam.QueryLengthBucket to AnalyticsSanitizer.queryLengthBucket(query),
-            AnalyticsParam.ResultCountBucket to AnalyticsSanitizer.countBucket(resultCount)
-        )
+        val params = formsSearchParams(query, resultCount)
         analytics.logEvent(AnalyticsEvent.FormSearch, params)
-        if (resultCount == 0) {
+        if (query.isNotBlank() && resultCount == 0) {
             analytics.logEvent(AnalyticsEvent.FormSearchEmpty, params)
         }
     }
@@ -224,14 +224,3 @@ private fun Throwable.downloadFailureMessage(): String =
     } else {
         "Could not download this form. Please try again."
     }
-
-private fun FormItem.analyticsParams(query: String, throwable: Throwable? = null): Map<String, Any?> =
-    mapOf(
-        AnalyticsParam.Flow to AnalyticsFlow.Forms,
-        AnalyticsParam.FormId to id,
-        AnalyticsParam.FormCategory to category,
-        AnalyticsParam.FormLanguage to language,
-        AnalyticsParam.QueryTextSafe to AnalyticsSanitizer.safeSearchText(query),
-        AnalyticsParam.QueryLengthBucket to AnalyticsSanitizer.queryLengthBucket(query),
-        AnalyticsParam.ErrorType to throwable?.javaClass?.simpleName
-    )
