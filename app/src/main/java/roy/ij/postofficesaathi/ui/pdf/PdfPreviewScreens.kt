@@ -174,7 +174,6 @@ fun PdfPreviewEditorScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        analytics.logButtonTap("pdf_preview_reset_confirm", AnalyticsScreen.Preview)
                         analytics.logEvent(AnalyticsEvent.PdfPreviewReset, pdfParams(layoutType))
                         undoStack = undoStack + listOf(currentPlacements)
                         currentPlacements = PdfPlacementFactory.reset(currentPlacements)

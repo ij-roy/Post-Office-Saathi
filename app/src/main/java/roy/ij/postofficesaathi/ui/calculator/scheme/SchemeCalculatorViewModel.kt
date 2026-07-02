@@ -16,9 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import roy.ij.postofficesaathi.analytics.AnalyticsEvent
-import roy.ij.postofficesaathi.analytics.AnalyticsFlow
 import roy.ij.postofficesaathi.analytics.AnalyticsParam
-import roy.ij.postofficesaathi.analytics.AnalyticsSanitizer
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.calculator.GitHubRatesRepository
 import roy.ij.postofficesaathi.data.calculator.RatesRepository
@@ -70,7 +68,7 @@ sealed interface SchemeCalculatorExternalAction {
 
 class SchemeCalculatorViewModel(
     private val schemeType: SchemeType,
-    initialAmount: Double?,
+    private val initialAmount: Double?,
     private val ratesRepository: RatesRepository,
     private val analytics: SaathiAnalytics
 ) : ViewModel() {
@@ -88,6 +86,7 @@ class SchemeCalculatorViewModel(
     val externalActions: SharedFlow<SchemeCalculatorExternalAction> = _externalActions.asSharedFlow()
 
     private var history: RateHistory? = null
+    private var openedLogged = false
 
     init {
         loadRates()
@@ -97,6 +96,7 @@ class SchemeCalculatorViewModel(
         viewModelScope.launch {
             if (schemeType == SchemeType.SIMPLE_INTEREST || schemeType == SchemeType.COMPOUND_INTEREST) {
                 _uiState.update { it.copy(isLoading = false) }
+                logOpened()
                 return@launch
             }
             val loadResult = ratesRepository.loadRates()
@@ -112,6 +112,7 @@ class SchemeCalculatorViewModel(
                 )
             }
             resolveOfficialRate()
+            logOpened()
         }
     }
 
@@ -125,6 +126,7 @@ class SchemeCalculatorViewModel(
             val safeDate = if (minDate != null && date.isBefore(minDate)) minDate else date
             state.copy(startDate = safeDate, errors = state.errors - FieldDate)
         }
+        logInputChanged("start_date", _uiState.value.startDate.toString())
         resolveOfficialRate()
     }
 
@@ -137,18 +139,12 @@ class SchemeCalculatorViewModel(
                 it.copy(toDate = date)
             }
         }
+        logInputChanged("to_date", _uiState.value.toDate.toString())
     }
 
     fun updateTdTenure(tenure: TDTenure) {
         _uiState.update { it.copy(tdTenure = tenure) }
-        analytics.logEvent(
-            AnalyticsEvent.TDTenureChanged,
-            mapOf(
-                AnalyticsParam.Flow to AnalyticsFlow.Calculator,
-                AnalyticsParam.SchemeType to SchemeType.TD.name,
-                AnalyticsParam.TDTenure to tenure.jsonKey
-            )
-        )
+        logInputChanged("td_tenure", tenure.jsonKey)
         resolveOfficialRate()
     }
 
@@ -159,6 +155,7 @@ class SchemeCalculatorViewModel(
                 schemeType = if (type == CustomCalculatorType.Simple) SchemeType.SIMPLE_INTEREST else SchemeType.COMPOUND_INTEREST
             )
         }
+        logInputChanged("custom_type", type.name)
     }
 
     fun updateRateOverride(value: String) {
@@ -173,10 +170,12 @@ class SchemeCalculatorViewModel(
     fun enableRateOverride() {
         val official = _uiState.value.officialRate?.ratePercent?.toString().orEmpty()
         _uiState.update { it.copy(isRateOverridden = true, rateOverride = official) }
+        logInputChanged("rate_override_enabled", true)
     }
 
     fun resetRateOverride() {
         _uiState.update { it.copy(isRateOverridden = false, rateOverride = "") }
+        logInputChanged("rate_override_reset", true)
     }
 
     fun updateInstallmentsPaid(value: String) {
@@ -193,10 +192,12 @@ class SchemeCalculatorViewModel(
 
     fun updateCompoundFrequency(option: CompoundFrequencyOption) {
         _uiState.update { it.copy(compoundFrequencyOption = option) }
+        logInputChanged("compound_frequency", option.name)
     }
 
     fun updateScssExtended(extended: Boolean) {
         _uiState.update { it.copy(scssExtended = extended) }
+        logInputChanged("scss_extended", extended)
     }
 
     fun calculate() {
@@ -206,6 +207,7 @@ class SchemeCalculatorViewModel(
             val errors = validate(state)
             if (errors.isNotEmpty()) {
                 _uiState.update { it.copy(errors = errors, isCalculating = false) }
+                analytics.logEvent(AnalyticsEvent.CalculationFailed, calculationFailedParams(state, errors))
                 return@launch
             }
             val rate = state.activeRatePercent ?: 0.0
@@ -225,8 +227,27 @@ class SchemeCalculatorViewModel(
                 toDate = state.toDate,
                 scssExtended = state.scssExtended
             )
-            val result = InterestEngine.calculate(input)
-            logCalculation(state, result)
+            val result = runCatching { InterestEngine.calculate(input) }
+                .onFailure { error ->
+                    val params = calculationFailedParams(state, mapOf("calculation" to (error.message ?: "Calculation failed"))) +
+                        mapOf(
+                            AnalyticsParam.ErrorArea to "calculator_calculation",
+                            AnalyticsParam.ErrorType to error.javaClass.simpleName
+                        )
+                    analytics.logEvent(AnalyticsEvent.CalculationFailed, params)
+                    analytics.recordError("calculator_calculation", error, params)
+                    _uiState.update { it.copy(isCalculating = false) }
+                }
+                .getOrNull() ?: return@launch
+            analytics.logEvent(
+                AnalyticsEvent.CalculationSucceeded,
+                calculationSucceededParams(
+                    input = input,
+                    result = result,
+                    ratesVersion = state.rateVersion,
+                    usedFallback = state.officialRate?.usedFallback == true
+                )
+            )
             if (state.officialRate?.usedFallback == true && !state.isRateOverridden) {
                 logRateFallback(state.officialRate)
                 showMessage("Rate unavailable for this date. Using current rate.")
@@ -286,21 +307,6 @@ class SchemeCalculatorViewModel(
         _uiState.update { it.copy(message = message, messageId = it.messageId + 1L) }
     }
 
-    private fun logCalculation(state: SchemeCalculatorUiState, result: CalculatorResult) {
-        analytics.logEvent(
-            AnalyticsEvent.CalculationPerformed,
-            mapOf(
-                AnalyticsParam.Flow to AnalyticsFlow.Calculator,
-                AnalyticsParam.SchemeType to result.schemeType.name,
-                AnalyticsParam.TDTenure to state.tdTenure.jsonKey.takeIf { state.schemeType == SchemeType.TD },
-                AnalyticsParam.InvestmentAmountBucket to AnalyticsSanitizer.amountBucket(result.totalDeposited),
-                AnalyticsParam.TenureBucket to AnalyticsSanitizer.tenureBucket(state.customYears.toDoubleOrNull() ?: state.tdTenure.years.toDouble()),
-                AnalyticsParam.RatesVersion to state.rateVersion,
-                AnalyticsParam.UsedFallback to (state.officialRate?.usedFallback == true)
-            )
-        )
-    }
-
     private fun logRateFallback(lookup: RateLookupResult?) {
         if (lookup == null) return
         analytics.logEvent(
@@ -312,6 +318,35 @@ class SchemeCalculatorViewModel(
                 AnalyticsParam.RatesVersion to lookup.rateDatasetVersion,
                 AnalyticsParam.FallbackRate to lookup.ratePercent,
                 AnalyticsParam.FallbackEffectiveFrom to lookup.effectiveFrom.toString()
+            )
+        )
+    }
+
+    private fun logOpened() {
+        if (openedLogged) return
+        openedLogged = true
+        val state = _uiState.value
+        analytics.logEvent(
+            AnalyticsEvent.CalculatorOpened,
+            calculatorOpenedParams(
+                schemeType = state.schemeType,
+                entryPoint = if ((initialAmount ?: 0.0) > 0.0) "plan_suggester" else "calculator_home",
+                initialAmount = initialAmount,
+                ratesVersion = state.rateVersion,
+                usedFallback = state.officialRate?.usedFallback
+            )
+        )
+    }
+
+    private fun logInputChanged(fieldName: String, fieldValue: Any?) {
+        val state = _uiState.value
+        analytics.logEvent(
+            AnalyticsEvent.CalculatorInputChanged,
+            calculatorInputChangedParams(
+                schemeType = state.schemeType,
+                fieldName = fieldName,
+                fieldValue = fieldValue,
+                ratesVersion = state.rateVersion
             )
         )
     }

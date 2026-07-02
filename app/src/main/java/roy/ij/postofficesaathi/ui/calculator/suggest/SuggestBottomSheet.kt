@@ -136,16 +136,19 @@ fun SuggestBottomSheet(
                     AgentRow(
                         agent = agent,
                         onCall = {
-                            viewModel.logAgentContact(agent, "call")
-                            callAgent(context, agent.phone)
+                            runCatching { callAgent(context, agent.phone) }
+                                .onSuccess { viewModel.logAgentContactSucceeded(agent, "call") }
+                                .onFailure { viewModel.logAgentContactFailed(agent, "call", it) }
                         },
                         onWhatsApp = {
-                            viewModel.logAgentContact(agent, "whatsapp")
-                            whatsAppAgent(context, agent.phone)
+                            runCatching { whatsAppAgent(context, agent.phone) }
+                                .onSuccess { viewModel.logAgentContactSucceeded(agent, "whatsapp") }
+                                .onFailure { viewModel.logAgentContactFailed(agent, "whatsapp", it) }
                         },
                         onShare = {
-                            viewModel.logAgentContact(agent, "share")
-                            shareAgent(context, agent)
+                            runCatching { shareAgent(context, agent) }
+                                .onSuccess { viewModel.logAgentContactSucceeded(agent, "share") }
+                                .onFailure { viewModel.logAgentContactFailed(agent, "share", it) }
                         }
                     )
                 }

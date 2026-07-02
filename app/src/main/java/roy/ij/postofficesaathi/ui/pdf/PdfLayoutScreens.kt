@@ -204,7 +204,6 @@ fun PdfLayoutSelectionScreen(
                                 layoutType = PdfLayoutType.OneDocument,
                                 modifier = Modifier.weight(1f),
                                 onClick = { layout ->
-                                    analytics.logButtonTap("pdf_layout_one_document", AnalyticsScreen.PdfLayout)
                                     onLayoutSelected(layout)
                                 }
                             )
@@ -213,7 +212,6 @@ fun PdfLayoutSelectionScreen(
                                 layoutType = PdfLayoutType.TwoDocuments,
                                 modifier = Modifier.weight(1f),
                                 onClick = { layout ->
-                                    analytics.logButtonTap("pdf_layout_two_documents", AnalyticsScreen.PdfLayout)
                                     onLayoutSelected(layout)
                                 }
                             )
@@ -222,7 +220,6 @@ fun PdfLayoutSelectionScreen(
                                 layoutType = PdfLayoutType.ThreeCards,
                                 modifier = Modifier.weight(1f),
                                 onClick = { layout ->
-                                    analytics.logButtonTap("pdf_layout_three_cards", AnalyticsScreen.PdfLayout)
                                     onLayoutSelected(layout)
                                 }
                             )

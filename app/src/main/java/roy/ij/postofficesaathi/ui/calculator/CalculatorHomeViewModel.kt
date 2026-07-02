@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import roy.ij.postofficesaathi.analytics.AnalyticsEvent
+import roy.ij.postofficesaathi.analytics.AnalyticsFlow
 import roy.ij.postofficesaathi.analytics.AnalyticsParam
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.calculator.GitHubRatesRepository
@@ -80,7 +81,13 @@ class CalculatorHomeViewModel(
             val cards = HomeSchemes.map { scheme -> CalculatorHomeCardMapper.cardFor(scheme, result.history) }
             val pendingToast = ratesRepository.pendingRateUpdateToast()
             if (pendingToast != null) ratesRepository.clearPendingRateUpdateToast()
-            analytics.logEvent(AnalyticsEvent.CalculatorOpened)
+            analytics.logEvent(
+                AnalyticsEvent.CalculatorOpened,
+                mapOf(
+                    AnalyticsParam.Flow to AnalyticsFlow.Calculator,
+                    AnalyticsParam.EntryPoint to "home"
+                )
+            )
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -90,13 +97,6 @@ class CalculatorHomeViewModel(
                 )
             }
         }
-    }
-
-    fun onSchemeSelected(schemeType: SchemeType) {
-        analytics.logEvent(
-            AnalyticsEvent.SchemeSelected,
-            mapOf(AnalyticsParam.SchemeType to schemeType.name)
-        )
     }
 
     class Factory(

@@ -12,9 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import roy.ij.postofficesaathi.analytics.AnalyticsEvent
-import roy.ij.postofficesaathi.analytics.AnalyticsFlow
 import roy.ij.postofficesaathi.analytics.AnalyticsParam
-import roy.ij.postofficesaathi.analytics.AnalyticsSanitizer
 import roy.ij.postofficesaathi.analytics.SaathiAnalytics
 import roy.ij.postofficesaathi.data.agent.Agent
 import roy.ij.postofficesaathi.data.agent.AgentRepository
@@ -69,39 +67,51 @@ class SuggestViewModel(
             val amount = _uiState.value.amount.toDoubleOrNull()
             if (amount == null || amount <= 0.0) {
                 _uiState.update { it.copy(amountError = "Please enter a valid amount.") }
+                analytics.logEvent(
+                    AnalyticsEvent.PlanSuggestFailed,
+                    planSuggestFailedParams(_uiState.value.amount, "plan_suggest_validation")
+                )
                 return@launch
             }
             _uiState.update { it.copy(isSuggesting = true, amountError = null) }
-            val history = ratesRepository.loadRates().history
-            val date = LocalDate.now()
-            val schemes = listOf(SchemeType.TD, SchemeType.NSC, SchemeType.KVP, SchemeType.MIS, SchemeType.SCSS, SchemeType.MSSC)
-            val suggestions = schemes.mapNotNull { scheme ->
-                runCatching {
-                    val lookup = SchemeRateResolver.resolve(history, scheme, date, TDTenure.FiveYears)
-                    val input = CalculatorInput(
-                        schemeType = scheme,
-                        amount = amount,
-                        startDate = date,
-                        ratePercent = lookup.ratePercent,
-                        compoundingFrequency = lookup.compoundingFrequency,
-                        tdTenure = TDTenure.FiveYears
-                    )
-                    val result = InterestEngine.calculate(input)
-                    PlanSuggestionUi(
-                        schemeType = scheme,
-                        title = if (scheme == SchemeType.TD) "Time Deposit 5 Years" else scheme.displayName,
-                        maturityAmount = result.totalReceived,
-                        ratePercent = lookup.ratePercent,
-                        result = result
-                    )
-                }.getOrNull()
-            }.sortedByDescending { it.maturityAmount }
+            val suggestions = runCatching {
+                val history = ratesRepository.loadRates().history
+                val date = LocalDate.now()
+                val schemes = listOf(SchemeType.TD, SchemeType.NSC, SchemeType.KVP, SchemeType.MIS, SchemeType.SCSS, SchemeType.MSSC)
+                schemes.mapNotNull { scheme ->
+                    runCatching {
+                        val lookup = SchemeRateResolver.resolve(history, scheme, date, TDTenure.FiveYears)
+                        val input = CalculatorInput(
+                            schemeType = scheme,
+                            amount = amount,
+                            startDate = date,
+                            ratePercent = lookup.ratePercent,
+                            compoundingFrequency = lookup.compoundingFrequency,
+                            tdTenure = TDTenure.FiveYears
+                        )
+                        val result = InterestEngine.calculate(input)
+                        PlanSuggestionUi(
+                            schemeType = scheme,
+                            title = if (scheme == SchemeType.TD) "Time Deposit 5 Years" else scheme.displayName,
+                            maturityAmount = result.totalReceived,
+                            ratePercent = lookup.ratePercent,
+                            result = result
+                        )
+                    }.getOrNull()
+                }.sortedByDescending { it.maturityAmount }
+            }.onFailure { error ->
+                val params = planSuggestFailedParams(amount.toString(), "plan_suggest_load", error)
+                analytics.logEvent(AnalyticsEvent.PlanSuggestFailed, params)
+                analytics.recordError("plan_suggest", error, params)
+                _uiState.update { it.copy(isSuggesting = false) }
+            }.getOrNull() ?: return@launch
             analytics.logEvent(
                 AnalyticsEvent.PlanSuggested,
-                mapOf(
-                    AnalyticsParam.Flow to AnalyticsFlow.Calculator,
-                    AnalyticsParam.InvestmentAmountBucket to AnalyticsSanitizer.amountBucket(amount),
-                    AnalyticsParam.ResultCountBucket to AnalyticsSanitizer.countBucket(suggestions.size)
+                planSuggestedParams(
+                    investmentAmount = amount,
+                    resultCount = suggestions.size,
+                    topScheme = suggestions.firstOrNull()?.schemeType,
+                    topMaturityAmount = suggestions.firstOrNull()?.maturityAmount
                 )
             )
             _uiState.update { it.copy(isSuggesting = false, suggestions = suggestions) }
@@ -113,18 +123,17 @@ class SuggestViewModel(
             val pincode = _uiState.value.pincode
             if (pincode.length != 6) {
                 _uiState.update { it.copy(pincodeError = "Enter a 6 digit pincode.") }
+                analytics.logEvent(
+                    AnalyticsEvent.AgentSearchPerformed,
+                    agentSearchParams(pincode, resultCount = 0, errorMessage = "Validation")
+                )
                 return@launch
             }
             _uiState.update { it.copy(isSearchingAgents = true, pincodeError = null, agentMessage = null) }
             val result = agentRepository.searchByPincode(pincode)
             analytics.logEvent(
                 AnalyticsEvent.AgentSearchPerformed,
-                mapOf(
-                    AnalyticsParam.Flow to AnalyticsFlow.Calculator,
-                    AnalyticsParam.PincodePrefix to AnalyticsSanitizer.pincodePrefix(pincode),
-                    AnalyticsParam.ResultCountBucket to AnalyticsSanitizer.countBucket(result.agents.size),
-                    AnalyticsParam.ErrorType to result.errorMessage
-                )
+                agentSearchParams(pincode, result.agents.size, result.errorMessage)
             )
             _uiState.update {
                 it.copy(
@@ -136,25 +145,19 @@ class SuggestViewModel(
         }
     }
 
-    fun logAgentContact(agent: Agent, type: String) {
-        analytics.logEvent(
-            AnalyticsEvent.AgentContacted,
-            mapOf(
-                AnalyticsParam.AgentId to agent.id,
-                AnalyticsParam.AgentContactType to type,
-                AnalyticsParam.PincodePrefix to AnalyticsSanitizer.pincodePrefix(agent.pincode)
-            )
-        )
+    fun logAgentContactSucceeded(agent: Agent, type: String) {
+        analytics.logEvent(AnalyticsEvent.AgentContacted, agentContactParams(agent, type))
+    }
+
+    fun logAgentContactFailed(agent: Agent, type: String, throwable: Throwable) {
+        val params = agentContactParams(agent, type, throwable) +
+            mapOf(AnalyticsParam.ErrorArea to "agent_contact")
+        analytics.logEvent(AnalyticsEvent.AgentContactFailed, params)
+        analytics.recordError("agent_contact", throwable, params)
     }
 
     fun logPlanDetailOpened(suggestion: PlanSuggestionUi) {
-        analytics.logEvent(
-            AnalyticsEvent.PlanDetailOpened,
-            mapOf(
-                AnalyticsParam.SchemeType to suggestion.schemeType.name,
-                AnalyticsParam.InvestmentAmountBucket to AnalyticsSanitizer.amountBucket(suggestion.result.totalDeposited)
-            )
-        )
+        analytics.logEvent(AnalyticsEvent.PlanDetailOpened, planDetailOpenedParams(suggestion))
     }
 
     class Factory(

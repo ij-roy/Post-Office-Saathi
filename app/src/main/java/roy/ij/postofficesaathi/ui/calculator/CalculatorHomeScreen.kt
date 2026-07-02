@@ -69,10 +69,7 @@ fun CalculatorHomeRoute(
     CalculatorHomeScreen(
         state = state,
         onBack = onBack,
-        onOpenScheme = {
-            viewModel.onSchemeSelected(it)
-            onOpenScheme(it)
-        },
+        onOpenScheme = onOpenScheme,
         onSuggestPlans = onSuggestPlans
     )
 }
